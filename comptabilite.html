@@ -596,7 +596,7 @@
                             </li>
                             <li>
                                 <i class="bi bi-piggy-bank text-primary me-2"></i>
-                                <strong>Solde :</strong> Approvisionnements - (Achats + Commissions + Frais)
+                                <strong>Solde :</strong> Approvisionnements - Achats - Commissions - Frais de livraison
                             </li>
                         </ul>
                     </div>
@@ -802,7 +802,7 @@
                 synthese[cmd.id] = {
                     nom: cmd.nom,
                     approvisionnements: 0,
-                    achats: 0,
+                    achats: 0,          // total hors commission
                     commissions: 0,
                     frais: 0
                 };
@@ -816,7 +816,9 @@
 
             achats.forEach(achat => {
                 if (synthese[achat.commanditaireId]) {
-                    synthese[achat.commanditaireId].achats += achat.total;
+                    // Achats hors commission
+                    synthese[achat.commanditaireId].achats += achat.quantite * achat.prixUnitaire;
+                    // Commissions séparées
                     synthese[achat.commanditaireId].commissions += achat.quantite * achat.commission;
                 }
             });
@@ -930,8 +932,8 @@
             } else {
                 emptyMsg.style.display = 'none';
                 synthese.forEach(s => {
-                    const totalDebit = s.achats + s.commissions + s.frais;
-                    const solde = s.approvisionnements - totalDebit;
+                    // Solde = approvisionnements - achats (hors commission) - commissions - frais
+                    const solde = s.approvisionnements - s.achats - s.commissions - s.frais;
                     const soldeClass = solde >= 0 ? 'text-success' : 'text-danger';
 
                     const tr = document.createElement('tr');
@@ -951,34 +953,37 @@
         function updateKPIs() {
             const mouvements = buildJournalMouvements();
             
+            // Total des approvisionnements
             const totalApprov = mouvements
                 .filter(m => m.type === 'approvisionnement')
                 .reduce((s, m) => s + m.credit, 0);
             
-            const totalAchats = mouvements
-                .filter(m => m.type === 'achat')
-                .reduce((s, m) => s + m.debit, 0);
+            // Total des achats (hors commission) : calcul direct à partir des données achats
+            const totalAchatsHorsCommission = achats.reduce((sum, a) => sum + (a.quantite * a.prixUnitaire), 0);
             
-            const totalCommissions = mouvements
-                .filter(m => m.type === 'commission')
-                .reduce((s, m) => s + m.debit, 0);
+            // Total des commissions (déjà séparé)
+            const totalCommissions = achats.reduce((sum, a) => sum + (a.quantite * a.commission), 0);
             
+            // Total des frais de livraison
             const totalFrais = mouvements
                 .filter(m => m.type === 'frais')
                 .reduce((s, m) => s + m.debit, 0);
 
-            const solde = totalApprov - totalAchats - totalCommissions - totalFrais;
+            // Solde = approvisionnements - achats (hors commission) - commissions - frais
+            const solde = totalApprov - totalAchatsHorsCommission - totalCommissions - totalFrais;
 
+            // Affichage des KPI
             document.getElementById('kpiTotalApprov').textContent = totalApprov.toLocaleString() + ' FCFA';
-            document.getElementById('kpiTotalDepenses').textContent = totalAchats.toLocaleString() + ' FCFA';
+            document.getElementById('kpiTotalDepenses').textContent = totalAchatsHorsCommission.toLocaleString() + ' FCFA';
             document.getElementById('kpiTotalCommissions').textContent = totalCommissions.toLocaleString() + ' FCFA';
             document.getElementById('kpiTotalFrais').textContent = totalFrais.toLocaleString() + ' FCFA';
             document.getElementById('kpiSoldeDisponible').textContent = solde.toLocaleString() + ' FCFA';
 
-            document.getElementById('resumeAchats').textContent = totalAchats.toLocaleString() + ' FCFA';
+            // Résumé global
+            document.getElementById('resumeAchats').textContent = totalAchatsHorsCommission.toLocaleString() + ' FCFA';
             document.getElementById('resumeCommissions').textContent = totalCommissions.toLocaleString() + ' FCFA';
             document.getElementById('resumeFrais').textContent = totalFrais.toLocaleString() + ' FCFA';
-            document.getElementById('resumeTotalDepenses').textContent = (totalAchats + totalCommissions + totalFrais).toLocaleString() + ' FCFA';
+            document.getElementById('resumeTotalDepenses').textContent = (totalAchatsHorsCommission + totalCommissions + totalFrais).toLocaleString() + ' FCFA';
             document.getElementById('resumeApprov').textContent = totalApprov.toLocaleString() + ' FCFA';
         }
 

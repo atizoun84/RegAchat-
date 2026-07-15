@@ -169,6 +169,50 @@
             line-height: 1.2;
         }
 
+        /* Section WhatsApp */
+        .whatsapp-number-section {
+            background: #f0f7ff;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #c9e4f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .whatsapp-number-section .label {
+            font-weight: 600;
+            color: var(--color-primary-dark);
+            margin-right: 10px;
+        }
+        .whatsapp-number-section .whatsapp-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .whatsapp-number-section .whatsapp-input-group input {
+            width: 250px;
+            border: 2px solid #dce7f2;
+            border-radius: 10px;
+            padding: 0.3rem 0.8rem;
+            font-weight: 600;
+            color: #0066cc;
+            background: #fff;
+            transition: all 0.3s ease;
+        }
+        .whatsapp-number-section .whatsapp-input-group input:focus {
+            border-color: var(--color-primary-medium);
+            box-shadow: 0 0 0 0.2rem rgba(42, 111, 151, 0.2);
+            outline: none;
+        }
+        .whatsapp-number-section .whatsapp-input-group input:disabled {
+            background: #e9ecef;
+            color: #495057;
+            cursor: not-allowed;
+        }
+
         /* Badges de statut */
         .badge-status {
             padding: 0.4rem 0.8rem;
@@ -494,6 +538,51 @@
         #connectionStatus i {
             font-size: 0.9rem;
         }
+
+        /* Modal de déverrouillage élégante */
+        .unlock-modal .modal-content {
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(13, 59, 94, 0.3);
+            border: none;
+        }
+        .unlock-modal .modal-header {
+            background: var(--gradient-bg);
+            color: #fff;
+            border-radius: 20px 20px 0 0 !important;
+            border: none;
+        }
+        .unlock-modal .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        .unlock-modal .modal-body {
+            padding: 2rem 1.5rem;
+            text-align: center;
+        }
+        .unlock-modal .modal-body i {
+            font-size: 3rem;
+            color: var(--color-accent);
+            margin-bottom: 1rem;
+        }
+        .unlock-modal .modal-body .unlock-code-input {
+            font-size: 1.5rem;
+            text-align: center;
+            letter-spacing: 8px;
+            font-weight: 700;
+            border: 2px solid #dce7f2;
+            border-radius: 12px;
+            padding: 0.5rem;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+        .unlock-modal .modal-body .unlock-code-input:focus {
+            border-color: var(--color-primary-medium);
+            box-shadow: 0 0 0 0.2rem rgba(42, 111, 151, 0.2);
+        }
+        .unlock-modal .modal-footer {
+            border-top: 1px solid #e9ecef;
+            background: #f8fcff;
+            border-radius: 0 0 20px 20px;
+        }
     </style>
 </head>
 <body>
@@ -592,6 +681,20 @@
                         <i class="bi bi-plus-circle me-1"></i> Nouvelle livraison
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Section Numéro WhatsApp -->
+        <div class="whatsapp-number-section">
+            <span class="label"><i class="bi bi-whatsapp text-success me-1"></i> Numéro WhatsApp pour notifications :</span>
+            <div class="whatsapp-input-group">
+                <input type="text" id="whatsappInput" placeholder="Ex: +22997744035" disabled>
+                <button class="btn btn-outline-primary btn-sm" id="btnSaveWhatsApp">
+                    <i class="bi bi-lock"></i> Enregistrer & Verrouiller
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="btnUnlockWhatsApp">
+                    <i class="bi bi-unlock"></i> Déverrouiller
+                </button>
             </div>
         </div>
 
@@ -781,6 +884,28 @@
         </div>
     </div>
 
+    <!-- Modal de déverrouillage (pour WhatsApp) -->
+    <div class="modal fade unlock-modal" id="unlockModal" tabindex="-1" aria-labelledby="unlockModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="unlockModalLabel"><i class="bi bi-lock-fill me-2"></i> Déverrouillage</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <i class="bi bi-shield-lock"></i>
+                    <p class="text-muted">Veuillez saisir le code de déverrouillage pour modifier le numéro WhatsApp.</p>
+                    <input type="password" class="form-control unlock-code-input" id="unlockCodeInput" placeholder="Code" maxlength="5" inputmode="numeric">
+                    <div id="unlockError" class="text-danger small mt-2 d-none">Code incorrect. Veuillez réessayer.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-custom-primary" id="btnUnlockConfirm">Valider</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <div class="container">
             Conçu par <strong>Atizoun Plateny AMOUSSOU</strong> - 
@@ -867,6 +992,7 @@
         const livraisonsRef = database.ref('livraisons');
         const balanceRef = database.ref('balance');
         const approvisionnementsRef = database.ref('approvisionnements');
+        const whatsappRef = database.ref('settings/whatsappNumber');
 
         // ─── États locaux ──────────────────────────────────────────────
         let users = [];
@@ -878,10 +1004,14 @@
         let approvisionnements = [];
         let balance = 0;
         let currentUser = null;
+        let whatsappNumber = '';
 
         // ─── DOM Elements ──────────────────────────────────────────────
         const connectionStatus = document.getElementById('connectionStatus');
         const statusText = document.getElementById('statusText');
+        const whatsappInput = document.getElementById('whatsappInput');
+        const btnSaveWhatsApp = document.getElementById('btnSaveWhatsApp');
+        const btnUnlockWhatsApp = document.getElementById('btnUnlockWhatsApp');
 
         // ─── Gestion du statut de connexion ────────────────────────────
         const connectedRef = database.ref('.info/connected');
@@ -1013,6 +1143,12 @@
                 const data = snap.val();
                 approvisionnements = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
             });
+
+            // Écouter le numéro WhatsApp
+            whatsappRef.on('value', (snap) => {
+                whatsappNumber = snap.val() || '';
+                updateWhatsAppUI();
+            });
         }
 
         // ─── Gestion de la session ──────────────────────────────────────
@@ -1044,6 +1180,68 @@
             }
             window.location.href = 'login.html';
         }
+
+        // ─── Gestion du WhatsApp ────────────────────────────────────────
+        function updateWhatsAppUI() {
+            if (whatsappNumber) {
+                whatsappInput.value = whatsappNumber;
+                whatsappInput.disabled = true;
+                btnSaveWhatsApp.innerHTML = '<i class="bi bi-lock"></i> Verrouillé';
+                btnSaveWhatsApp.disabled = true;
+            } else {
+                whatsappInput.value = '';
+                whatsappInput.disabled = false;
+                btnSaveWhatsApp.innerHTML = '<i class="bi bi-lock"></i> Enregistrer & Verrouiller';
+                btnSaveWhatsApp.disabled = false;
+            }
+        }
+
+        // Enregistrer et verrouiller
+        btnSaveWhatsApp.addEventListener('click', async function() {
+            const number = whatsappInput.value.trim();
+            if (!number) {
+                alert('Veuillez saisir un numéro WhatsApp valide.');
+                return;
+            }
+            try {
+                await whatsappRef.set(number);
+                alert('Numéro WhatsApp enregistré avec succès.');
+            } catch (err) {
+                console.error(err);
+                alert('Erreur lors de l\'enregistrement.');
+            }
+        });
+
+        // Déverrouiller
+        btnUnlockWhatsApp.addEventListener('click', function() {
+            const unlockModal = new bootstrap.Modal(document.getElementById('unlockModal'));
+            document.getElementById('unlockCodeInput').value = '';
+            document.getElementById('unlockError').classList.add('d-none');
+            unlockModal.show();
+        });
+
+        // Valider le code de déverrouillage
+        document.getElementById('btnUnlockConfirm').addEventListener('click', function() {
+            const code = document.getElementById('unlockCodeInput').value.trim();
+            if (code === '11984') {
+                const unlockModal = bootstrap.Modal.getInstance(document.getElementById('unlockModal'));
+                unlockModal.hide();
+                // Déverrouiller le champ
+                whatsappInput.disabled = false;
+                btnSaveWhatsApp.innerHTML = '<i class="bi bi-lock"></i> Enregistrer & Verrouiller';
+                btnSaveWhatsApp.disabled = false;
+                whatsappInput.focus();
+            } else {
+                document.getElementById('unlockError').classList.remove('d-none');
+            }
+        });
+
+        // Permettre l'envoi avec la touche Entrée dans le champ code
+        document.getElementById('unlockCodeInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('btnUnlockConfirm').click();
+            }
+        });
 
         // ─── Fonctions de rendu ──────────────────────────────────────────
         function getInventoryData() {
@@ -1236,7 +1434,8 @@
             }, 2000);
         }
 
-        // ─── Calcul des soldes ──────────────────────────────────────────
+        // ─── Calcul des soldes (corrigés) ──────────────────────────────
+        // Solde pour un commanditaire = approvisionnements - achats - commissions - frais
         function getSoldeCommanditaire(cmdId) {
             const totalApprov = approvisionnements
                 .filter(a => a.commanditaireId === cmdId)
@@ -1253,6 +1452,23 @@
             let totalFrais = 0;
             livraisons
                 .filter(l => l.commanditaireId === cmdId && l.deduireApprov && l.frais)
+                .forEach(l => {
+                    const frais = l.frais.reduce((s, f) => s + (f.montant || 0), 0);
+                    totalFrais += frais;
+                });
+
+            return totalApprov - totalAchats - totalCommissions - totalFrais;
+        }
+
+        // Solde global = même formule sans filtre de commanditaire
+        function getSoldeGlobal() {
+            const totalApprov = approvisionnements.reduce((sum, a) => sum + (a.montant || 0), 0);
+            const totalAchats = achats.reduce((sum, a) => sum + (a.total || 0), 0);
+            const totalCommissions = achats.reduce((sum, a) => sum + ((a.quantite || 0) * (a.commission || 0)), 0);
+
+            let totalFrais = 0;
+            livraisons
+                .filter(l => l.deduireApprov && l.frais)
                 .forEach(l => {
                     const frais = l.frais.reduce((s, f) => s + (f.montant || 0), 0);
                     totalFrais += frais;
@@ -1334,7 +1550,7 @@
             modal.show();
         }
 
-        // ─── Sauvegarde d'une livraison ────────────────────────────────
+        // ─── Sauvegarde d'une livraison (corrigée) ──────────────────────
         async function saveLivraison() {
             const cmdId = document.getElementById('livraisonCommanditaire').value;
             const prodId = document.getElementById('livraisonProduit').value;
@@ -1361,7 +1577,7 @@
                 return;
             }
 
-            // Vérifier la disponibilité avant la sauvegarde
+            // Vérifier la disponibilité de la quantité
             const inventoryBefore = getInventoryData();
             const itemBefore = inventoryBefore.find(i => 
                 i.produitId === prodId && 
@@ -1382,20 +1598,16 @@
 
             const totalFrais = frais.reduce((sum, f) => sum + f.montant, 0);
 
-            // Déduire les frais si coché
+            // Vérification du solde si déduction des frais est activée
             if (doitDeduire && totalFrais > 0) {
-                try {
-                    await balanceRef.transaction((currentBalance) => {
-                        const newBalance = (currentBalance || 0) - totalFrais;
-                        if (newBalance < 0) {
-                            throw new Error('Solde insuffisant');
-                        }
-                        return newBalance;
-                    });
-                } catch (error) {
-                    alert('Solde d\'approvisionnement insuffisant pour couvrir les frais.');
+                // Calcul du solde du commanditaire
+                const soldeCmd = getSoldeCommanditaire(cmdId);
+                if (soldeCmd < totalFrais) {
+                    alert(`Solde d'approvisionnement insuffisant pour couvrir les frais. Solde actuel : ${soldeCmd.toLocaleString()} FCFA, Frais : ${totalFrais.toLocaleString()} FCFA.`);
                     return;
                 }
+                // On pourrait aussi vérifier le solde global, mais on se base sur le commanditaire.
+                // Pas de transaction sur balanceRef, on laisse les données parler.
             }
 
             const id = document.getElementById('livraisonId').value;
@@ -1423,24 +1635,10 @@
                 showSuccessLivraisonMessage();
 
                 // ─── Récupérer les données mises à jour pour le message ──
-                // On attend que les listeners aient mis à jour les tableaux
-                // Pour être sûr, on force une lecture locale des données mises à jour
-                // (les listeners sont déjà en cours, mais on va utiliser les données fraîches)
-                // On peut recalculer l'inventaire avec les nouvelles livraisons
-                // Mais attention, les données ne sont pas encore synchronisées si on utilise les variables
-                // On va récupérer directement depuis le snapshot ?
-                // On peut utiliser les variables mises à jour par les listeners, mais c'est asynchrone.
-                // Pour éviter les délais, on recrée l'inventaire avec les données actuelles (déjà mises à jour car les listeners sont en temps réel)
-                // Cependant, il se peut que les listeners n'aient pas encore terminé.
-                // On va utiliser un petit délai ou mieux, utiliser les données immédiates.
-                // On peut forcer une mise à jour en lisant depuis le snapshot.
-                // Mais pour la rapidité, on va utiliser les variables qui seront mises à jour par les listeners,
-                // mais on peut aussi recalculer avec les données locales que nous avons déjà.
-
-                // Solution : on attend un peu pour que les données soient actualisées
+                // On attend un peu pour que les listeners aient mis à jour les tableaux
                 await new Promise(resolve => setTimeout(resolve, 300));
 
-                // Maintenant on recalcule l'inventaire avec les données mises à jour
+                // Recalculer l'inventaire avec les données mises à jour
                 const inventoryAfter = getInventoryData();
                 const itemAfter = inventoryAfter.find(i => 
                     i.produitId === prodId && 
@@ -1448,7 +1646,6 @@
                     i.commanditaireId === cmdId
                 );
 
-                // Si itemAfter est undefined, on utilise itemBefore comme fallback
                 const finalItem = itemAfter || itemBefore;
                 const finalQuantiteAchetee = finalItem ? finalItem.quantiteAchetee : 0;
                 const finalQuantiteLivree = finalItem ? finalItem.quantiteLivree : 0;
@@ -1457,24 +1654,24 @@
                 const finalStatut = finalItem ? getStatutItem(finalItem) : 'en-stock';
                 const finalDerniereLivraison = (finalItem && finalItem.livraisons.length > 0) ? finalItem.livraisons[0].date : 'Aucune';
 
-                // Récupérer les détails pour le message
+                // Récupérer les détails
                 const cmd = commanditaires.find(c => c.id === cmdId);
                 const produit = produits.find(p => p.id === prodId);
                 const mesure = mesures.find(m => m.id === mesId);
                 const soldeCmd = getSoldeCommanditaire(cmdId);
-                const soldeGeneral = balance;
+                const soldeGlobal = getSoldeGlobal();
 
-                // Récupérer le numéro WhatsApp
-                let numeroWhatsApp = cmd && cmd.contact ? cmd.contact : '';
+                // Récupérer le numéro WhatsApp global, sinon le contact du commanditaire
+                let numeroWhatsApp = whatsappNumber || (cmd && cmd.contact ? cmd.contact : '');
                 numeroWhatsApp = numeroWhatsApp.replace(/\s/g, '').replace(/[\(\)\-]/g, '');
                 if (numeroWhatsApp.startsWith('0')) {
                     numeroWhatsApp = '+229' + numeroWhatsApp.substring(1);
-                } else if (!numeroWhatsApp.startsWith('+')) {
+                } else if (!numeroWhatsApp.startsWith('+') && numeroWhatsApp.length > 0) {
                     numeroWhatsApp = '+229' + numeroWhatsApp;
                 }
 
                 if (!numeroWhatsApp || numeroWhatsApp.length < 8) {
-                    alert('Numéro WhatsApp non disponible pour ce commanditaire.');
+                    alert('Numéro WhatsApp non disponible. Veuillez configurer le numéro global ou vérifier le contact du commanditaire.');
                     return;
                 }
 
@@ -1492,7 +1689,7 @@
 🔹 *Dernière livraison* : ${finalDerniereLivraison}
 
 💰 *Solde du compte (${cmd ? cmd.nom : 'Inconnu'})* : ${soldeCmd.toFixed(0)} FCFA
-💰 *Solde général* : ${soldeGeneral.toFixed(0)} FCFA
+💰 *Solde général* : ${soldeGlobal.toFixed(0)} FCFA
 
 ✅ *Livraison effectuée par* : ${livreur}
 📝 *Commentaire* : ${commentaire || 'Aucun'}
@@ -1689,15 +1886,6 @@ AgriAchat – Gestion des achats agricoles`;
                         btn.addEventListener('click', function() {
                             const id = this.dataset.id;
                             if (confirm('Supprimer cette livraison ? Les frais déduits seront remboursés.')) {
-                                const livraison = livraisons.find(l => l.id === id);
-                                if (livraison && livraison.deduireApprov && livraison.frais) {
-                                    const totalFrais = livraison.frais.reduce((s, f) => s + f.montant, 0);
-                                    if (totalFrais > 0) {
-                                        balanceRef.transaction((currentBalance) => {
-                                            return (currentBalance || 0) + totalFrais;
-                                        });
-                                    }
-                                }
                                 livraisonsRef.child(id).remove()
                                     .catch(err => alert('Erreur lors de la suppression: ' + err.message));
                             }

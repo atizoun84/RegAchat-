@@ -505,20 +505,18 @@
             let achats = [];
             let livraisons = [];
 
-            // Fonction de calcul du solde
+            // Fonction de calcul du solde (corrigée selon la comptabilité)
             function calculerSolde() {
-                // Somme des approvisionnements
+                // Total des approvisionnements
                 const totalApprov = approvisionnements.reduce((sum, a) => sum + (a.montant || 0), 0);
 
-                // Somme des achats (total)
-                const totalAchats = achats.reduce((sum, a) => sum + (a.total || 0), 0);
+                // Total des achats hors commission
+                const totalAchatsHorsCommission = achats.reduce((sum, a) => sum + ((a.quantite || 0) * (a.prixUnitaire || 0)), 0);
 
-                // Somme des commissions (déjà incluses dans le total des achats ? 
-                // Dans la page compta, on additionne commissions séparément si elles sont dans les achats.
-                // On va faire comme dans la page compta : extraire les commissions des achats.
+                // Total des commissions
                 const totalCommissions = achats.reduce((sum, a) => sum + ((a.quantite || 0) * (a.commission || 0)), 0);
 
-                // Somme des frais de livraison déduits
+                // Total des frais de livraison déduits
                 let totalFrais = 0;
                 livraisons.forEach(liv => {
                     if (liv.deduireApprov && liv.frais && Array.isArray(liv.frais)) {
@@ -527,8 +525,8 @@
                     }
                 });
 
-                // Solde = approvisionnements - achats - commissions - frais
-                const solde = totalApprov - totalAchats - totalCommissions - totalFrais;
+                // Solde = Approvisionnements - Achats (hors commission) - Commissions - Frais
+                const solde = totalApprov - totalAchatsHorsCommission - totalCommissions - totalFrais;
                 return solde;
             }
 
@@ -560,13 +558,8 @@
                 updateSolde();
             });
 
-            // Initialisation : si aucune donnée, le solde reste à 0
-            // On peut aussi forcer un premier affichage
+            // Initialisation : affichage immédiat
             updateSolde();
-
-            // Nota : on ne lit plus le nœud "balance" car le solde est calculé dynamiquement.
-            // Cependant, on peut garder l'initialisation du nœud pour compatibilité avec d'autres pages
-            // mais ce n'est pas obligatoire.
 
         });
     </script>
