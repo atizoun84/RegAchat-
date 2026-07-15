@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Gestion des Achats Agricoles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="manifest" href="manifest.json">
+
+    <style>
+        :root {
+            --color-primary-dark: #144670;
+            --color-primary-medium: #3C6AA6;
+            --color-primary-light: #E6F2FF;
+            --color-alert-bright: #E01A1A;
+            --color-alert-medium: #ED6B6B;
+            --color-background-base: #FFFFFF;
+            --color-text-primary: #1A1A1A;
+            --color-text-secondary: #808080;
+            --color-text-on-primary: #FFFFFF;
+            --color-text-on-alert: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Roboto', 'Open Sans', sans-serif;
+            background-color: var(--color-primary-light);
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .login-container {
+            max-width: 450px;
+            width: 100%;
+            margin: auto;
+            padding: 20px;
+        }
+
+        .card-login {
+            background-color: var(--color-background-base);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(20, 70, 112, 0.15);
+            padding: 30px;
+        }
+
+        .brand-title {
+            color: var(--color-primary-dark);
+            font-weight: 700;
+            font-size: 1.6rem;
+        }
+
+        .btn-custom-primary {
+            background-color: var(--color-primary-medium);
+            color: var(--color-text-on-primary);
+            border: none;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-custom-primary:hover {
+            background-color: var(--color-primary-dark);
+            color: var(--color-text-on-primary);
+        }
+
+        .btn-outline-custom {
+            color: var(--color-primary-medium);
+            border-color: var(--color-primary-medium);
+        }
+
+        .btn-outline-custom:hover {
+            background-color: var(--color-primary-medium);
+            color: var(--color-text-on-primary);
+        }
+
+        /* Message de succès plein écran */
+        #success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(20, 70, 112, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        #success-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .success-box {
+            background: var(--color-background-base);
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            color: #2ec4b6;
+        }
+
+        .badge-admin {
+            background-color: var(--color-primary-dark);
+            color: var(--color-text-on-primary);
+        }
+
+        .badge-acheteur {
+            background-color: var(--color-primary-medium);
+            color: var(--color-text-on-primary);
+        }
+
+        footer {
+            background-color: var(--color-primary-dark);
+            color: var(--color-text-on-primary);
+            padding: 15px 0;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        #usersTableBody tr {
+            transition: background-color 0.15s ease;
+        }
+        #usersTableBody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .btn-edit-mode {
+            background-color: #ffc107 !important;
+            color: #000 !important;
+            border-color: #ffc107 !important;
+        }
+
+        /* BOUTON D'INSTALLATION FLOTTANT */
+        .install-button {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 9998;
+            background-color: var(--color-primary-medium);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(20, 70, 112, 0.4);
+            display: none;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+        .install-button:hover {
+            background-color: var(--color-primary-dark);
+            transform: scale(1.03);
+        }
+        .install-button i {
+            font-size: 1.4rem;
+        }
+        .install-button.hidden {
+            display: none !important;
+        }
+
+        /* Toast de statut de connexion */
+        #connectionStatus {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 9999;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            background-color: #28a745;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.3s, opacity 0.3s;
+        }
+        #connectionStatus.offline {
+            background-color: #dc3545;
+        }
+        #connectionStatus i {
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast de statut de connexion -->
+    <div id="connectionStatus" class="online">
+        <i class="bi bi-wifi"></i> En ligne
+    </div>
+
+    <div id="success-overlay">
+        <div class="success-box">
+            <i class="bi bi-check-circle-fill success-icon"></i>
+            <h2 class="mt-3 card-title" style="color: var(--color-primary-dark);">Connexion Réussie !</h2>
+            <p class="text-muted mt-2">Redirection vers le tableau de bord en cours...</p>
+        </div>
+    </div>
+
+    <main class="container login-container flex-grow-1 d-flex align-items-center">
+        <div class="card-login w-100">
+            <div class="text-center mb-4">
+                <i class="bi bi-tree-fill" style="font-size: 3rem; color: var(--color-primary-dark);"></i>
+                <h1 class="brand-title mt-2">AgriAchat</h1>
+                <p class="text-muted small">Application de gestion des achats agricoles</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="userSelect" class="form-label fw-semibold">Sélectionner l'utilisateur</label>
+                    <select class="form-select" id="userSelect" required>
+                        <option value="" disabled selected>Choisir un profil...</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="passwordInput" class="form-label fw-semibold">Mot de passe</label>
+                    <input type="password" class="form-control" id="passwordInput" placeholder="Entrez votre mot de passe" required>
+                    <div id="loginError" class="text-danger small mt-2 d-none" style="color: var(--color-alert-bright) !important;">
+                        <i class="bi bi-exclamation-circle-fill"></i> Mot de passe incorrect.
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-custom-primary w-100 py-2 mb-3">
+                    <i class="bi bi-box-arrow-in-right me-2"></i> Se connecter
+                </button>
+            </form>
+
+            <hr class="my-4">
+
+            <button class="btn btn-outline-custom w-100 py-2" id="btnOpenUserManagement">
+                <i class="bi bi-gear-fill me-2"></i> Gestion des Utilisateurs
+            </button>
+        </div>
+    </main>
+
+    <div class="modal fade" id="userManagementModal" tabindex="-1" aria-labelledby="userManagementModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white" style="background-color: var(--color-primary-dark);">
+                    <h5 class="modal-title" id="userManagementModalLabel"><i class="bi bi-people-fill me-2"></i> Gestion des Utilisateurs (Admin & Acheteurs)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+
+                    <form id="userForm" class="row g-3 mb-4 bg-light p-3 rounded border">
+                        <input type="hidden" id="userId">
+                        <div class="col-md-4">
+                            <label for="userName" class="form-label small fw-bold">Nom complet</label>
+                            <input type="text" class="form-control form-control-sm" id="userName" required placeholder="Ex: Jean Dupont">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="userRole" class="form-label small fw-bold">Rôle</label>
+                            <select class="form-select form-select-sm" id="userRole" required>
+                                <option value="admin">Administrateur</option>
+                                <option value="acheteur">Acheteur</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="userPassword" class="form-label small fw-bold">Mot de passe</label>
+                            <input type="text" class="form-control form-control-sm" id="userPassword" placeholder="Par défaut si vide" required>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end gap-1">
+                            <button type="submit" id="btnSaveUser" class="btn btn-custom-primary btn-sm w-100">
+                                <i class="bi bi-check-lg"></i> Enregistrer
+                            </button>
+                            <button type="button" id="btnCancelEdit" class="btn btn-secondary btn-sm d-none">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive" style="max-height: 250px;">
+                        <table class="table table-hover align-middle border">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Rôle</th>
+                                    <th>Mot de passe</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            Conçu par <strong>Atizoun Plateny AMOUSSOU</strong> - <a href="mailto:atizoun@gmail.com" class="text-white text-decoration-none">atizoun@gmail.com</a> - <a href="tel:0197744035" class="text-white text-decoration-none">01 97 74 40 35</a>
+        </div>
+    </footer>
+
+    <!-- BOUTON D'INSTALLATION FLOTTANT -->
+    <button id="installButton" class="install-button hidden">
+        <i class="bi bi-download"></i> Installer l'application
+    </button>
+
+    <!-- Scripts classiques (Service Worker et installation) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enregistrement du Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then((registration) => {
+                    console.log('Service Worker enregistré avec succès :', registration);
+                })
+                .catch((error) => {
+                    console.error('Échec de l\'enregistrement du Service Worker :', error);
+                });
+        }
+
+        // Gestion du bouton d'installation
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installButton');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+            installBtn.style.display = 'flex';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                console.log('Choix utilisateur :', result.outcome);
+                if (result.outcome === 'accepted') {
+                    installBtn.classList.add('hidden');
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.classList.add('hidden');
+            deferredPrompt = null;
+        });
+    </script>
+
+    <!-- ============================================================ -->
+    <!--  SCRIPT PRINCIPAL AVEC FIREBASE (MODULE)                       -->
+    <!-- ============================================================ -->
+    <script type="module">
+        // ─── Import Firebase ──────────────────────────────────────────────
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, remove, push, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
+
+        // ─── Configuration Firebase ──────────────────────────────────────
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsmRMJCtxsOkf3rCylpuTCcm4pnObvRK0",
+            authDomain: "regachat-ad0e9.firebaseapp.com",
+            databaseURL: "https://regachat-ad0e9-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "regachat-ad0e9",
+            storageBucket: "regachat-ad0e9.firebasestorage.app",
+            messagingSenderId: "809503223361",
+            appId: "1:809503223361:web:bbcf81fea1a6afdd86e0c0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const usersRef = ref(database, 'users');
+
+        // ─── État local ──────────────────────────────────────────────────
+        let users = [];
+        let currentUser = null; // pour la connexion
+
+        // ─── Éléments DOM ────────────────────────────────────────────────
+        const userSelect = document.getElementById('userSelect');
+        const loginForm = document.getElementById('loginForm');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginError = document.getElementById('loginError');
+        const successOverlay = document.getElementById('success-overlay');
+        const usersTableBody = document.getElementById('usersTableBody');
+        const userForm = document.getElementById('userForm');
+        const btnOpenUserManagement = document.getElementById('btnOpenUserManagement');
+        const btnSaveUser = document.getElementById('btnSaveUser');
+        const btnCancelEdit = document.getElementById('btnCancelEdit');
+        const userModalEl = document.getElementById('userManagementModal');
+        const userModal = new bootstrap.Modal(userModalEl);
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // ─── Gestion du statut en ligne / hors ligne ─────────────────────
+        function updateConnectionStatus(online) {
+            if (online) {
+                connectionStatus.className = 'online';
+                connectionStatus.innerHTML = '<i class="bi bi-wifi"></i> En ligne';
+            } else {
+                connectionStatus.className = 'offline';
+                connectionStatus.innerHTML = '<i class="bi bi-wifi-off"></i> Hors ligne';
+            }
+        }
+
+        window.addEventListener('online', () => updateConnectionStatus(true));
+        window.addEventListener('offline', () => updateConnectionStatus(false));
+
+        // Vérification initiale
+        updateConnectionStatus(navigator.onLine);
+
+        // ─── Synchronisation avec Firebase ──────────────────────────────
+
+        // Lecture en temps réel des utilisateurs
+        onValue(usersRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // Transformer l'objet en tableau avec id (la clé)
+                users = Object.entries(data).map(([id, values]) => ({
+                    id: id,
+                    ...values
+                }));
+            } else {
+                users = [];
+                // Si la base est vide, créer des utilisateurs par défaut avec des ID fixes (1 et 2)
+                createDefaultUsers();
+            }
+            renderUserSelect();
+            renderUsersTable();
+        }, (error) => {
+            console.error("Erreur de lecture Firebase :", error);
+        });
+
+        // ─── Création des utilisateurs par défaut avec ID fixes ────────
+        async function createDefaultUsers() {
+            try {
+                const defaultUsers = [
+                    { id: "1", name: "Directeur Général (Admin)", role: "admin", password: "1234" },
+                    { id: "2", name: "Acheteur Central", role: "acheteur", password: "5678" }
+                ];
+                for (const user of defaultUsers) {
+                    await set(ref(database, 'users/' + user.id), {
+                        name: user.name,
+                        role: user.role,
+                        password: user.password
+                    });
+                }
+                // La mise à jour se fera via le listener onValue
+            } catch (error) {
+                console.error("Erreur lors de la création des utilisateurs par défaut :", error);
+            }
+        }
+
+        // ─── Fonctions de rendu ──────────────────────────────────────────
+
+        function renderUserSelect() {
+            const currentSelected = userSelect.value;
+            userSelect.innerHTML = '<option value="" disabled selected>Choisir un profil...</option>';
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.name + ' [' + user.role.toUpperCase() + ']';
+                userSelect.appendChild(option);
+            });
+            if (currentSelected && users.some(u => u.id === currentSelected)) {
+                userSelect.value = currentSelected;
+            }
+        }
+
+        function renderUsersTable() {
+            usersTableBody.innerHTML = '';
+            users.forEach(user => {
+                const badgeClass = user.role === 'admin' ? 'badge-admin' : 'badge-acheteur';
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td class="fw-bold">' + escapeHtml(user.name) + '</td>' +
+                    '<td><span class="badge ' + badgeClass + '">' + user.role.toUpperCase() + '</span></td>' +
+                    '<td><code>' + escapeHtml(user.password) + '</code></td>' +
+                    '<td class="text-end">' +
+                        '<button class="btn btn-sm btn-outline-warning edit-btn me-1" data-id="' + user.id + '" title="Modifier">' +
+                            '<i class="bi bi-pencil-fill"></i>' +
+                        '</button>' +
+                        '<button class="btn btn-sm btn-outline-danger delete-btn" data-id="' + user.id + '" title="Supprimer">' +
+                            '<i class="bi bi-trash-fill"></i>' +
+                        '</button>' +
+                    '</td>';
+                usersTableBody.appendChild(tr);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ─── Gestion des utilisateurs (CRUD) ────────────────────────────
+
+        // Ajouter / modifier
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('userId').value;
+            const name = document.getElementById('userName').value.trim();
+            const role = document.getElementById('userRole').value;
+            const password = document.getElementById('userPassword').value.trim();
+
+            if (!name || !password) {
+                alert("Veuillez remplir tous les champs obligatoires.");
+                return;
+            }
+
+            try {
+                if (id) {
+                    // Modification
+                    await set(ref(database, 'users/' + id), {
+                        name: name,
+                        role: role,
+                        password: password
+                    });
+                } else {
+                    // Ajout : on génère un ID numérique en incrémentant le max existant
+                    const maxId = users.reduce((max, u) => Math.max(max, parseInt(u.id) || 0), 0);
+                    const newId = (maxId + 1).toString();
+                    await set(ref(database, 'users/' + newId), {
+                        name: name,
+                        role: role,
+                        password: password
+                    });
+                }
+                resetUserForm();
+                // La mise à jour de l'interface se fera via le listener onValue
+            } catch (error) {
+                console.error("Erreur lors de l'enregistrement :", error);
+                alert("Erreur lors de l'enregistrement. Vérifiez votre connexion.");
+            }
+        });
+
+        // Supprimer
+        async function deleteUser(id) {
+            if (!confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) return;
+            try {
+                await remove(ref(database, 'users/' + id));
+                if (document.getElementById('userId').value === id) {
+                    resetUserForm();
+                }
+            } catch (error) {
+                console.error("Erreur lors de la suppression :", error);
+                alert("Erreur lors de la suppression. Vérifiez votre connexion.");
+            }
+        }
+
+        // Éditer (remplir le formulaire)
+        function editUser(id) {
+            const user = users.find(u => u.id === id);
+            if (!user) return;
+
+            document.getElementById('userId').value = user.id;
+            document.getElementById('userName').value = user.name;
+            document.getElementById('userRole').value = user.role;
+            document.getElementById('userPassword').value = user.password;
+
+            btnSaveUser.innerHTML = '<i class="bi bi-arrow-repeat"></i> Mettre à jour';
+            btnSaveUser.classList.add('btn-edit-mode');
+            btnCancelEdit.classList.remove('d-none');
+
+            userForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function resetUserForm() {
+            userForm.reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('userPassword').value = '1234';
+            btnSaveUser.innerHTML = '<i class="bi bi-check-lg"></i> Enregistrer';
+            btnSaveUser.classList.remove('btn-edit-mode');
+            btnCancelEdit.classList.add('d-none');
+        }
+
+        // ─── Événements du formulaire utilisateur ──────────────────────
+
+        document.getElementById('userRole').addEventListener('change', function() {
+            const passInput = document.getElementById('userPassword');
+            const val = passInput.value;
+            if (val === "1234" || val === "5678" || val === "") {
+                passInput.value = this.value === 'admin' ? '1234' : '5678';
+            }
+        });
+
+        document.getElementById('userPassword').value = "1234";
+
+        btnCancelEdit.addEventListener('click', resetUserForm);
+
+        // ─── Délégation pour les boutons du tableau ─────────────────────
+
+        usersTableBody.addEventListener('click', function(e) {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const id = btn.getAttribute('data-id');
+            if (!id) return;
+
+            if (btn.classList.contains('edit-btn')) {
+                editUser(id);
+            } else if (btn.classList.contains('delete-btn')) {
+                deleteUser(id);
+            }
+        });
+
+        // ─── Ouverture de la modal avec vérification du code ────────────
+
+        btnOpenUserManagement.addEventListener('click', function() {
+            const code = prompt("Veuillez saisir le code d'accès administrateur pour gérer les profils :");
+            if (code === "1234") {
+                userModal.show();
+            } else if (code !== null) {
+                alert("Code d'accès incorrect !");
+            }
+        });
+
+        // ─── Connexion ──────────────────────────────────────────────────
+
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            loginError.classList.add('d-none');
+
+            const selectedId = userSelect.value;
+            const enteredPassword = passwordInput.value;
+            const user = users.find(u => u.id === selectedId);
+
+            if (user && user.password === enteredPassword) {
+                // Stocker l'ID de l'utilisateur connecté (cohérent avec Firebase)
+                localStorage.setItem('agri_current_user_id', user.id);
+
+                successOverlay.classList.add('active');
+                setTimeout(function() {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } else {
+                loginError.classList.remove('d-none');
+            }
+        });
+
+        // ─── Initialisation ──────────────────────────────────────────────
+
+        // Le listener onValue s'occupe de tout. Si la base est vide, createDefaultUsers() est appelé.
+        console.log("Application Firebase prête.");
+    </script>
+</body>
+</html>

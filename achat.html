@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Achats - Gestion des Achats Agricoles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Lien vers le manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --color-primary-dark: #0d3b5e;
+            --color-primary-medium: #2a6f97;
+            --color-primary-light: #c9e4f0;
+            --color-accent: #f9a826;
+            --color-alert-bright: #E01A1A;
+            --color-background-base: #FFFFFF;
+            --color-text-primary: #1A1A1A;
+            --color-text-secondary: #555;
+            --color-text-on-primary: #FFFFFF;
+            --gradient-bg: linear-gradient(135deg, #0d3b5e 0%, #2a6f97 100%);
+            --gradient-card: linear-gradient(145deg, #ffffff, #f2f6fa);
+        }
+
+        body {
+            font-family: 'Roboto', 'Open Sans', sans-serif;
+            background: #e8f0f7;
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-custom {
+            background: var(--gradient-bg) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: var(--color-text-on-primary) !important;
+            font-weight: 500;
+        }
+
+        .navbar-custom .nav-link.active {
+            font-weight: 700;
+            border-bottom: 3px solid var(--color-accent);
+        }
+
+        .navbar-custom .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+        }
+
+        .navbar-custom .nav-link.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .user-info {
+            color: var(--color-text-on-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .user-info .badge-role-nav {
+            background-color: rgba(255,255,255,0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .btn-custom-primary {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(42, 111, 151, 0.3);
+        }
+
+        .btn-custom-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(42, 111, 151, 0.4);
+            background: var(--color-primary-dark);
+            color: #fff;
+        }
+
+        .btn-outline-accent {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+        .btn-outline-accent:hover {
+            background: var(--color-accent);
+            color: #fff;
+        }
+
+        .section-title {
+            color: var(--color-primary-dark);
+            font-weight: 700;
+            border-bottom: 3px solid var(--color-accent);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            background: var(--gradient-card);
+            box-shadow: 0 8px 24px rgba(13, 59, 94, 0.10);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(13, 59, 94, 0.15);
+        }
+
+        .card-header {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            font-weight: 600;
+            border-bottom: none;
+            border-radius: 16px 16px 0 0 !important;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .stat-card {
+            background: var(--gradient-card);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+            border-left: 4px solid var(--color-accent);
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+        }
+
+        .stat-icon {
+            font-size: 1.2rem;
+            color: var(--color-primary-medium);
+        }
+
+        .stat-number {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--color-primary-dark);
+        }
+
+        .stat-label {
+            color: var(--color-text-secondary);
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        /* Plaquette des statistiques */
+        .stats-plaquette {
+            background: var(--gradient-card);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(13, 59, 94, 0.10);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-plaquette .stat-item {
+            text-align: center;
+            padding: 0.25rem 0.5rem;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .stats-plaquette .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stats-plaquette .stat-icon {
+            font-size: 1.2rem;
+            color: var(--color-primary-medium);
+            margin-bottom: 0.15rem;
+        }
+
+        .stats-plaquette .stat-number {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--color-primary-dark);
+            line-height: 1.2;
+        }
+
+        .stats-plaquette .stat-label {
+            color: var(--color-text-secondary);
+            font-size: 0.7rem;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        .stats-plaquette .commission-stat {
+            border-left: 3px solid #dc3545;
+        }
+
+        .stats-plaquette .approv-stat {
+            border-left: 3px solid #28a745;
+        }
+
+        /* Formulaire d'achat - champs plus étroits pour 2 colonnes */
+        .achat-form-card .form-label {
+            font-size: 0.85rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .achat-form-card .form-control,
+        .achat-form-card .form-select {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.75rem;
+        }
+
+        .achat-form-card .input-large {
+            font-size: 1.1rem;
+        }
+
+        .achat-form-card .row.g-3 {
+            --bs-gutter-x: 0.75rem;
+            --bs-gutter-y: 0.75rem;
+        }
+
+        /* Centrage des champs quantité, total et commission */
+        .centered-field {
+            text-align: center;
+        }
+
+        .centered-field .form-control {
+            text-align: center;
+        }
+
+        .centered-field .form-label {
+            text-align: center;
+            display: block;
+        }
+
+        .centered-field .commission-label {
+            text-align: center;
+            display: block;
+        }
+
+        /* Animation pour le champ quantité */
+        @keyframes pulse-border {
+            0% {
+                border-color: #dce7f2;
+                box-shadow: 0 0 0 0 rgba(42, 111, 151, 0.4);
+            }
+            50% {
+                border-color: var(--color-primary-medium);
+                box-shadow: 0 0 0 8px rgba(42, 111, 151, 0);
+            }
+            100% {
+                border-color: #dce7f2;
+                box-shadow: 0 0 0 0 rgba(42, 111, 151, 0);
+            }
+        }
+
+        @keyframes pulse-bg {
+            0% {
+                background-color: #ffffff;
+            }
+            50% {
+                background-color: #e8f4fd;
+            }
+            100% {
+                background-color: #ffffff;
+            }
+        }
+
+        #quantite {
+            animation: pulse-border 2s infinite, pulse-bg 2s infinite;
+            transition: all 0.3s ease;
+        }
+
+        #quantite:focus {
+            animation: none;
+            border-color: var(--color-primary-medium);
+            box-shadow: 0 0 0 0.2rem rgba(42, 111, 151, 0.2);
+            background-color: #ffffff;
+        }
+
+        .table-achat td {
+            vertical-align: middle;
+        }
+
+        .filter-row {
+            background: #ffffffcc;
+            backdrop-filter: blur(4px);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 1rem;
+            display: none; /* Masqué par défaut */
+        }
+        .filter-row.visible {
+            display: flex;
+        }
+
+        footer {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            padding: 15px 0;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        footer a {
+            color: var(--color-text-on-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+            color: var(--color-accent);
+        }
+
+        /* Overlay succès */
+        #successOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(13, 59, 94, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        #successOverlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .success-message-box {
+            background: #fff;
+            padding: 30px 50px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+        }
+
+        .success-message-box i {
+            font-size: 4rem;
+            color: #2ec4b6;
+        }
+
+        .success-message-box h4 {
+            color: var(--color-primary-dark);
+            margin-top: 10px;
+        }
+
+        /* Champs en gras et colorés - Bleu scintillant */
+        .form-control, .form-select {
+            font-weight: 700;
+            color: #0066cc;
+            border: 2px solid #dce7f2;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--color-primary-medium);
+            box-shadow: 0 0 0 0.2rem rgba(42, 111, 151, 0.2);
+            color: #0044aa;
+        }
+
+        /* Animation scintillante pour les champs */
+        .form-control, .form-select {
+            animation: shimmer-text 3s infinite alternate;
+        }
+
+        @keyframes shimmer-text {
+            0% { color: #0066cc; text-shadow: 0 0 5px rgba(0,102,204,0.2); }
+            50% { color: #0088ff; text-shadow: 0 0 15px rgba(0,136,255,0.4); }
+            100% { color: #0044aa; text-shadow: 0 0 8px rgba(0,68,170,0.3); }
+        }
+
+        /* Champs quantité et prix unitaire plus grands */
+        .input-large {
+            font-size: 1.4rem;
+            font-weight: 700;
+            animation: shimmer-text 2s infinite alternate;
+        }
+
+        .input-large:focus {
+            font-size: 1.4rem;
+        }
+
+        /* Commission en rouge */
+        .commission-amount {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        .commission-total {
+            color: #dc3545;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        .badge-commission {
+            background: #dc3545;
+            color: #fff;
+            font-size: 1rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+        }
+
+        /* Montant négatif en rouge */
+        .negative-amount {
+            color: #dc3545 !important;
+            font-weight: 700;
+        }
+
+        /* Style pour le libellé de la commission */
+        .commission-label {
+            font-size: 0.85rem;
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        /* Modal commission - style raffiné */
+        .modal-commission .modal-content {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(13, 59, 94, 0.3);
+            background: var(--gradient-card);
+        }
+
+        .modal-commission .modal-header {
+            background: var(--gradient-bg);
+            color: #fff;
+            border-radius: 20px 20px 0 0 !important;
+            border: none;
+        }
+
+        .modal-commission .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        .modal-commission .modal-footer {
+            border-top: 1px solid #e9ecef;
+            background: #f8fcff;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .commission-detail-row {
+            transition: background-color 0.2s ease;
+        }
+
+        .commission-detail-row:hover {
+            background-color: #f0f7ff;
+        }
+        /* Bouton toggle filtre */
+        #toggleFilterBtn {
+            margin-bottom: 0.5rem;
+        }
+
+        /* ---- Bouton d'installation flottant ---- */
+        .install-button {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 9999;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            border-radius: 50px;
+            padding: 12px 24px;
+            display: none; /* caché par défaut, montré par JS */
+            align-items: center;
+            gap: 10px;
+            background: var(--gradient-bg);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .install-button:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 32px rgba(13, 59, 94, 0.4);
+            color: #fff;
+        }
+        .install-button i {
+            font-size: 1.4rem;
+        }
+        @media (max-width: 576px) {
+            .install-button {
+                bottom: 15px;
+                right: 15px;
+                padding: 10px 18px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Statut de connexion permanent */
+        #connectionStatus {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+            background-color: #198754;
+            color: white;
+        }
+        #connectionStatus.offline {
+            background-color: #dc3545;
+        }
+        #connectionStatus i {
+            font-size: 0.9rem;
+        }
+
+        /* Style pour le numéro WhatsApp */
+        .whatsapp-number-section {
+            background: #f0f7ff;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #c9e4f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .whatsapp-number-section .label {
+            font-weight: 600;
+            color: var(--color-primary-dark);
+            margin-right: 10px;
+        }
+        .whatsapp-number-section .number-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0066cc;
+            flex-grow: 1;
+        }
+        .whatsapp-number-section .btn-modify {
+            margin-left: 10px;
+        }
+
+        /* Modal déverrouillage */
+        .unlock-modal .modal-content {
+            border-radius: 16px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+        }
+        .unlock-modal .modal-header {
+            background: var(--gradient-bg);
+            color: #fff;
+            border-radius: 16px 16px 0 0;
+        }
+        .unlock-modal .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        .unlock-modal .modal-footer {
+            border-top: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-tree-fill me-2"></i> AgriAchat
+                <!-- Toast permanent : statut en ligne / hors ligne -->
+                <span id="connectionStatus" class="online">
+                    <i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item" id="nav-dashboard">
+                        <a class="nav-link" href="index.html"><i class="bi bi-speedometer2 me-1"></i> Tableau de bord</a>
+                    </li>
+                    <li class="nav-item" id="nav-achats">
+                        <a class="nav-link active" aria-current="page" href="achat.html"><i class="bi bi-cart-plus me-1"></i> Achats</a>
+                    </li>
+                    <li class="nav-item" id="nav-approv">
+                        <a class="nav-link" href="approv.html"><i class="bi bi-wallet2 me-1"></i> Approvisionnement</a>
+                    </li>
+                    <li class="nav-item" id="nav-compta">
+                        <a class="nav-link" href="comptabilite.html"><i class="bi bi-calculator me-1"></i> Comptabilité</a>
+                    </li>
+                    <li class="nav-item" id="nav-inventaire">
+                        <a class="nav-link" href="point.html"><i class="bi bi-boxes me-1"></i> Inventaire</a>
+                    </li>
+                    <li class="nav-item" id="nav-parametres">
+                        <a class="nav-link" href="parametres.html"><i class="bi bi-gear me-1"></i> Paramètres</a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="user-info" id="userInfoNav">
+                            <span id="navUserName">—</span>
+                            <span class="badge-role-nav" id="navUserRole">—</span>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm" id="logoutBtn">
+                            <i class="bi bi-box-arrow-right me-1"></i> Déconnecter
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4 flex-grow-1">
+        <h2 class="section-title"><i class="bi bi-cart-plus me-2"></i> Achats</h2>
+
+        <!-- Message de succès overlay -->
+        <div id="successOverlay">
+            <div class="success-message-box">
+                <i class="bi bi-check-circle-fill"></i>
+                <h4>Opération réussie !</h4>
+                <p class="text-muted">L'achat a été enregistré.</p>
+            </div>
+        </div>
+
+        <!-- Plaquette des statistiques -->
+        <div class="stats-plaquette">
+            <div class="row g-0 align-items-center">
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+                    <div class="stat-number" id="totalDepenses">0</div>
+                    <div class="stat-label">Total dépensé</div>
+                </div>
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-arrow-right-circle"></i></div>
+                    <div class="stat-number" id="nbAchats">0</div>
+                    <div class="stat-label">Nb achats</div>
+                </div>
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
+                    <div class="stat-number" id="soldeRestant">0</div>
+                    <div class="stat-label">Solde restant</div>
+                </div>
+                <div class="col stat-item commission-stat" id="commissionStatCard" style="cursor:pointer;">
+                    <div class="stat-icon"><i class="bi bi-percent"></i></div>
+                    <div class="stat-number" id="commissionTotal">0</div>
+                    <div class="stat-label">Commissions</div>
+                </div>
+                <div class="col stat-item approv-stat">
+                    <div class="stat-icon"><i class="bi bi-wallet"></i></div>
+                    <div class="stat-number" id="soldeApprov">0</div>
+                    <div class="stat-label">Approvisionnement</div>
+                </div>
+                <div class="col stat-item" style="border-right:none;">
+                    <button class="btn btn-outline-danger btn-sm w-100" id="btnRetirerCommission">
+                        <i class="bi bi-box-arrow-down me-1"></i> Retirer commission
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Numéro WhatsApp -->
+        <div class="whatsapp-number-section mb-3">
+            <span class="label"><i class="bi bi-whatsapp text-success me-1"></i> Numéro WhatsApp pour notifications :</span>
+            <span class="number-display" id="whatsappDisplay">Non défini</span>
+            <button class="btn btn-outline-primary btn-sm btn-modify" id="btnModifyWhatsApp">
+                <i class="bi bi-pencil"></i> Modifier
+            </button>
+        </div>
+
+        <!-- Sélection du commanditaire (admin uniquement) -->
+        <div class="row g-3 mb-4" id="adminSelectRow" style="display:none;">
+            <div class="col-md-6">
+                <label for="selectCommanditaire" class="form-label fw-semibold">Choisir un commanditaire</label>
+                <select class="form-select" id="selectCommanditaire">
+                    <option value="">Tous les commanditaires</option>
+                </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button class="btn btn-outline-secondary" id="btnRefreshSoldes">Actualiser les soldes</button>
+            </div>
+        </div>
+
+        <!-- Formulaire d'ajout d'achat -->
+        <div class="card mb-4 achat-form-card">
+            <div class="card-header">
+                <i class="bi bi-plus-circle me-2"></i> Ajouter un achat
+            </div>
+            <div class="card-body">
+                <form id="achatForm" class="row g-3">
+                    <input type="hidden" id="achatId" value="">
+                    <!-- 2 champs par ligne : disposition en 2 colonnes avec largeur réduite -->
+                    <div class="col-md-6">
+                        <label for="selectProduit" class="form-label fw-semibold">Produit</label>
+                        <select class="form-select" id="selectProduit" required>
+                            <option value="">Sélectionner</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="selectMesure" class="form-label fw-semibold">Mesure</label>
+                        <select class="form-select" id="selectMesure" required>
+                            <option value="">Sélectionner</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 centered-field">
+                        <label for="quantite" class="form-label fw-semibold">Quantité</label>
+                        <input type="number" class="form-control input-large" id="quantite" step="1" min="1" placeholder="Ex: 10" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="prixUnitaire" class="form-label fw-semibold">Prix unitaire (FCFA)</label>
+                        <input type="number" class="form-control input-large" id="prixUnitaire" step="1" min="1" placeholder="Ex: 500" required>
+                    </div>
+                    <div class="col-md-6 centered-field">
+                        <label for="commission" class="form-label fw-semibold">Commission</label>
+                        <input type="text" class="form-control commission-amount" id="commission" readonly>
+                        <small class="commission-label" id="commissionDetail">0 FCFA</small>
+                    </div>
+                    <div class="col-md-6 centered-field">
+                        <label for="totalAchat" class="form-label fw-semibold">TOTAL À PAYER (FCFA)</label>
+                        <input type="text" class="form-control" id="totalAchat" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="vendeurNom" class="form-label fw-semibold">Nom du vendeur</label>
+                        <input type="text" class="form-control" id="vendeurNom" placeholder="Optionnel">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="vendeurTel" class="form-label fw-semibold">Téléphone vendeur</label>
+                        <input type="text" class="form-control" id="vendeurTel" placeholder="Optionnel">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="achatDate" class="form-label fw-semibold">Date</label>
+                        <input type="date" class="form-control" id="achatDate" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="achatCommentaire" class="form-label fw-semibold">Commentaire (optionnel)</label>
+                        <input type="text" class="form-control" id="achatCommentaire" placeholder="Motif, référence...">
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-custom-primary w-100" id="btnSaveAchat">
+                            <i class="bi bi-check-lg"></i> Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bouton Afficher/Masquer les filtres -->
+        <button class="btn btn-outline-secondary btn-sm mb-2" id="toggleFilterBtn">
+            <i class="bi bi-funnel me-1"></i> Afficher les filtres
+        </button>
+
+        <!-- Filtres -->
+        <div class="filter-row row g-2 align-items-end" id="filterRow">
+            <div class="col-md-3">
+                <label for="filterDateDebut" class="form-label small">Date début</label>
+                <input type="date" class="form-control form-control-sm" id="filterDateDebut">
+            </div>
+            <div class="col-md-3">
+                <label for="filterDateFin" class="form-label small">Date fin</label>
+                <input type="date" class="form-control form-control-sm" id="filterDateFin">
+            </div>
+            <div class="col-md-2">
+                <label for="filterProduit" class="form-label small">Produit</label>
+                <select class="form-select form-select-sm" id="filterProduit">
+                    <option value="">Tous</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="filterMontantMin" class="form-label small">Montant min</label>
+                <input type="number" class="form-control form-control-sm" id="filterMontantMin" placeholder="0">
+            </div>
+            <div class="col-md-2">
+                <label for="filterMontantMax" class="form-label small">Montant max</label>
+                <input type="number" class="form-control form-control-sm" id="filterMontantMax" placeholder="∞">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary btn-sm w-100" id="btnApplyFilters">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+            </div>
+        </div>
+
+        <!-- Bouton afficher/masquer l'historique -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <button class="btn btn-outline-primary" id="toggleHistoriqueBtn">
+                <i class="bi bi-eye me-1"></i> Afficher l'historique
+            </button>
+            <span class="badge bg-secondary" id="nbHistorique">0 entrées</span>
+        </div>
+
+        <!-- Liste des achats -->
+        <div id="historiqueContainer" style="display: none;">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul me-2"></i> Historique des achats</span>
+                    <div>
+                        <button class="btn btn-outline-success btn-sm" id="btnExportCSV"><i class="bi bi-file-earmark-spreadsheet"></i> CSV</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle table-achat">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Commanditaire</th>
+                                    <th>Acheteur</th>
+                                    <th>Produit</th>
+                                    <th>Mesure</th>
+                                    <th>Qté</th>
+                                    <th>Prix unit.</th>
+                                    <th>Commission</th>
+                                    <th>Total</th>
+                                    <th>Vendeur</th>
+                                    <th>Commentaire</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="achatTableBody">
+                                <!-- Rempli par JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted small mt-2" id="emptyMessage">Aucun achat enregistré.</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Détails des Commissions -->
+    <div class="modal fade modal-commission" id="commissionModal" tabindex="-1" aria-labelledby="commissionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="commissionModalLabel"><i class="bi bi-percent me-2"></i> Détail des commissions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Commanditaire</th>
+                                    <th>Produit</th>
+                                    <th>Mesure</th>
+                                    <th>Qté</th>
+                                    <th>Commission unit.</th>
+                                    <th>Total commission</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="commissionModalBody">
+                                <!-- Rempli par JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-3">
+                        <strong>Total des commissions : </strong>
+                        <span class="commission-amount" id="commissionModalTotal">0 FCFA</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de déverrouillage pour modifier le numéro WhatsApp -->
+    <div class="modal fade unlock-modal" id="unlockModal" tabindex="-1" aria-labelledby="unlockModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="unlockModalLabel"><i class="bi bi-lock-fill me-2"></i> Déverrouillage</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Veuillez saisir le code de déverrouillage pour modifier le numéro WhatsApp.</p>
+                    <input type="password" class="form-control" id="unlockCodeInput" placeholder="Code à 5 chiffres" maxlength="5" inputmode="numeric">
+                    <div id="unlockError" class="text-danger small mt-2 d-none">Code incorrect. Veuillez réessayer.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-custom-primary" id="btnUnlockConfirm">Valider</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de saisie du nouveau numéro WhatsApp -->
+    <div class="modal fade unlock-modal" id="editWhatsAppModal" tabindex="-1" aria-labelledby="editWhatsAppModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editWhatsAppModalLabel"><i class="bi bi-whatsapp me-2"></i> Modifier le numéro WhatsApp</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="newWhatsAppNumber" class="form-label fw-semibold">Nouveau numéro (format international, ex: +22997744035)</label>
+                    <input type="text" class="form-control" id="newWhatsAppNumber" placeholder="+229XXXXXXXXX">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-custom-primary" id="btnSaveWhatsApp">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            Conçu par <strong>Atizoun Plateny AMOUSSOU</strong> - 
+            <a href="mailto:atizoun@gmail.com">atizoun@gmail.com</a> - 
+            <a href="tel:0197744035">01 97 74 40 35</a>
+        </div>
+    </footer>
+
+    <!-- Bouton d'installation flottant (PWA) -->
+    <button id="installBtn" class="install-button">
+        <i class="bi bi-download"></i> Installer l'application
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ============================================================ -->
+    <!--  SCRIPT PRINCIPAL AVEC FIREBASE                               -->
+    <!-- ============================================================ -->
+    <script>
+        // ─── Configuration Firebase ──────────────────────────────────────
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsmRMJCtxsOkf3rCylpuTCcm4pnObvRK0",
+            authDomain: "regachat-ad0e9.firebaseapp.com",
+            databaseURL: "https://regachat-ad0e9-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "regachat-ad0e9",
+            storageBucket: "regachat-ad0e9.firebasestorage.app",
+            messagingSenderId: "809503223361",
+            appId: "1:809503223361:web:bbcf81fea1a6afdd86e0c0"
+        };
+
+        // Initialiser Firebase (compat)
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ─── Toast de statut de connexion ──────────────────────────────
+        const statusEl = document.getElementById('connectionStatus');
+        const statusText = document.getElementById('statusText');
+
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            const isConnected = snap.val() === true;
+            if (isConnected) {
+                statusEl.className = 'online';
+                statusText.textContent = 'En ligne';
+                statusEl.innerHTML = '<i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>';
+            } else {
+                statusEl.className = 'offline';
+                statusText.textContent = 'Hors ligne';
+                statusEl.innerHTML = '<i class="bi bi-wifi-off"></i> <span id="statusText">Hors ligne</span>';
+            }
+        });
+
+        // ─── Fonctions d'accès aux données Firebase ────────────────────
+
+        // Lecture des données et retour sous forme de tableau avec ID explicite
+        function readData(path) {
+            return new Promise((resolve) => {
+                database.ref(path).once('value', (snap) => {
+                    const val = snap.val();
+                    if (val) {
+                        resolve(Object.entries(val).map(([id, data]) => ({ id, ...data })));
+                    } else {
+                        resolve([]);
+                    }
+                });
+            });
+        }
+
+        // Écriture d'un objet dans un chemin
+        function writeData(path, data) {
+            return database.ref(path).set(data);
+        }
+
+        // Suppression
+        function deleteData(path) {
+            return database.ref(path).remove();
+        }
+
+        // Écoute en temps réel
+        function listenData(path, callback) {
+            database.ref(path).on('value', (snap) => {
+                const val = snap.val();
+                if (val) {
+                    const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
+                    callback(arr);
+                } else {
+                    callback([]);
+                }
+            });
+        }
+
+        // ─── Initialisation des données par défaut si vides ────────────
+
+        async function initDefaultData() {
+            try {
+                const users = await readData('users');
+                if (users.length === 0) {
+                    const defaultUsers = [
+                        { id: "1", name: "Directeur Général (Admin)", role: "admin", password: "1234", email: "admin@agriachat.com" },
+                        { id: "2", name: "Acheteur Central", role: "acheteur", password: "5678", email: "acheteur@agriachat.com" }
+                    ];
+                    for (const u of defaultUsers) {
+                        await writeData('users/' + u.id, {
+                            name: u.name,
+                            role: u.role,
+                            password: u.password,
+                            email: u.email
+                        });
+                    }
+                }
+                const commanditaires = await readData('commanditaires');
+                if (commanditaires.length === 0) {
+                    const defaultCmd = [
+                        { id: '1', nom: 'Coopérative Bénin', contact: 'coop@benin.agri' },
+                        { id: '2', nom: 'Export SA', contact: '+229 97 74 40 35' }
+                    ];
+                    for (const c of defaultCmd) {
+                        await writeData('commanditaires/' + c.id, { nom: c.nom, contact: c.contact });
+                    }
+                }
+                const produits = await readData('produits');
+                if (produits.length === 0) {
+                    const defaultProd = [
+                        { id: '1', nom: 'Maïs' },
+                        { id: '2', nom: 'Cacao' }
+                    ];
+                    for (const p of defaultProd) {
+                        await writeData('produits/' + p.id, { nom: p.nom });
+                    }
+                }
+                const mesures = await readData('mesures');
+                if (mesures.length === 0) {
+                    const defaultMes = [
+                        { id: '1', nom: 'Kilogramme', abrev: 'kg' },
+                        { id: '2', nom: 'Sachet', abrev: 'sac' }
+                    ];
+                    for (const m of defaultMes) {
+                        await writeData('mesures/' + m.id, { nom: m.nom, abrev: m.abrev });
+                    }
+                }
+                const commissions = await readData('commissions');
+                if (commissions.length === 0) {
+                    const defaultComm = [
+                        { id: '1', produitId: '1', mesureId: '1', montant: 500 },
+                        { id: '2', produitId: '2', mesureId: '2', montant: 300 }
+                    ];
+                    for (const c of defaultComm) {
+                        await writeData('commissions/' + c.id, { produitId: c.produitId, mesureId: c.mesureId, montant: c.montant });
+                    }
+                }
+                // Initialiser le numéro WhatsApp par défaut (si absent)
+                const settingsSnap = await database.ref('settings/whatsappNumber').once('value');
+                if (!settingsSnap.exists()) {
+                    await writeData('settings/whatsappNumber', '+22997744035');
+                }
+            } catch (e) {
+                console.error('Erreur initialisation données :', e);
+            }
+        }
+
+        // ─── Variables globales ──────────────────────────────────────────
+
+        let users = [];
+        let commanditaires = [];
+        let produits = [];
+        let mesures = [];
+        let commissions = [];
+        let approvisionnements = [];
+        let achats = [];
+        let commissionBalance = 0;
+        let currentUser = null;
+        let whatsappNumber = '';
+
+        // ─── Récupération de la session utilisateur ─────────────────────
+
+        async function initSession() {
+            await initDefaultData();
+            users = await readData('users');
+            const currentUserId = localStorage.getItem('agri_current_user_id');
+            currentUser = users.find(u => u.id === currentUserId);
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+            document.getElementById('navUserName').textContent = currentUser.name || 'Utilisateur';
+            document.getElementById('navUserRole').textContent = currentUser.role ? currentUser.role.toUpperCase() : '';
+            // Gestion des liens de navigation selon rôle
+            const role = currentUser.role;
+            const navApprov = document.getElementById('nav-approv');
+            const navCompta = document.getElementById('nav-compta');
+            const navInventaire = document.getElementById('nav-inventaire');
+            const navParametres = document.getElementById('nav-parametres');
+            if (role !== 'admin') {
+                if (navApprov) navApprov.style.display = 'none';
+                if (navCompta) navCompta.style.display = 'none';
+                if (navInventaire) navInventaire.style.display = 'none';
+                if (navParametres) navParametres.style.display = 'none';
+            }
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                localStorage.removeItem('agri_current_user_id');
+                window.location.href = 'login.html';
+            });
+
+            // Lire le numéro WhatsApp
+            const snap = await database.ref('settings/whatsappNumber').once('value');
+            whatsappNumber = snap.val() || '+22997744035';
+            document.getElementById('whatsappDisplay').textContent = whatsappNumber;
+        }
+
+        // ─── Fonctions de rendu (dépendent des données globales) ──────
+
+        function populateSelects() {
+            // Commanditaires
+            const selectCmd = document.getElementById('selectCommanditaire');
+            selectCmd.innerHTML = '<option value="">Tous les commanditaires</option>';
+            commanditaires.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nom;
+                selectCmd.appendChild(opt);
+            });
+            if (currentUser && currentUser.role === 'acheteur') {
+                const userCmd = commanditaires.find(c => c.nom === currentUser.name);
+                if (userCmd) {
+                    selectCmd.value = userCmd.id;
+                    selectCmd.disabled = true;
+                } else {
+                    if (commanditaires.length > 0) selectCmd.value = commanditaires[0].id;
+                    selectCmd.disabled = true;
+                }
+            } else {
+                selectCmd.disabled = false;
+            }
+
+            // Produits
+            const selectProd = document.getElementById('selectProduit');
+            selectProd.innerHTML = '<option value="">Sélectionner</option>';
+            produits.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.nom;
+                selectProd.appendChild(opt);
+            });
+
+            // Mesures
+            const selectMes = document.getElementById('selectMesure');
+            selectMes.innerHTML = '<option value="">Sélectionner</option>';
+            mesures.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.nom + (m.abrev ? ' (' + m.abrev + ')' : '');
+                selectMes.appendChild(opt);
+            });
+
+            // Filtre produit
+            const filterProd = document.getElementById('filterProduit');
+            filterProd.innerHTML = '<option value="">Tous</option>';
+            produits.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.nom;
+                filterProd.appendChild(opt);
+            });
+        }
+
+        function getSelectedCommanditaireId() {
+            const selectCmd = document.getElementById('selectCommanditaire');
+            if (currentUser && currentUser.role === 'admin') {
+                return selectCmd.value || null;
+            } else {
+                const userCmd = commanditaires.find(c => c.nom === currentUser.name);
+                if (userCmd) return userCmd.id;
+                if (commanditaires.length > 0) return commanditaires[0].id;
+                return null;
+            }
+        }
+
+        function calculerCommission(produitId, mesureId) {
+            const comm = commissions.find(c => c.produitId === produitId && c.mesureId === mesureId);
+            return comm ? comm.montant : 0;
+        }
+
+        function getMesureAbrev(mesureId) {
+            const mes = mesures.find(m => m.id === mesureId);
+            return mes ? mes.abrev || mes.nom : '';
+        }
+
+        function updateTotaux() {
+            const produitId = document.getElementById('selectProduit').value;
+            const mesureId = document.getElementById('selectMesure').value;
+            const quantite = parseFloat(document.getElementById('quantite').value) || 0;
+            const prixUnitaire = parseFloat(document.getElementById('prixUnitaire').value) || 0;
+
+            let commission = 0;
+            let mesureAbrev = '';
+            if (produitId && mesureId) {
+                commission = calculerCommission(produitId, mesureId);
+                mesureAbrev = getMesureAbrev(mesureId);
+            }
+            const commissionTotale = quantite * commission;
+            const total = quantite * prixUnitaire + commissionTotale;
+
+            const commissionInput = document.getElementById('commission');
+            const commissionDetail = document.getElementById('commissionDetail');
+            const totalAchatInput = document.getElementById('totalAchat');
+
+            if (commission > 0 && mesureAbrev) {
+                commissionInput.value = commission.toLocaleString() + ' FCFA / ' + mesureAbrev;
+                commissionDetail.textContent = 'Total: ' + commissionTotale.toLocaleString() + ' FCFA';
+                commissionDetail.style.color = '#dc3545';
+                commissionDetail.style.fontWeight = '700';
+            } else {
+                commissionInput.value = '0 FCFA';
+                commissionDetail.textContent = '0 FCFA';
+                commissionDetail.style.color = '#dc3545';
+                commissionDetail.style.fontWeight = '700';
+            }
+            totalAchatInput.value = total.toLocaleString() + ' FCFA';
+            if (total < 0) {
+                totalAchatInput.classList.add('negative-amount');
+            } else {
+                totalAchatInput.classList.remove('negative-amount');
+            }
+        }
+
+        function getFilteredAchats() {
+            let filtered = [...achats];
+            const cmdId = getSelectedCommanditaireId();
+            if (cmdId) {
+                filtered = filtered.filter(a => a.commanditaireId === cmdId);
+            }
+            const dateDebut = document.getElementById('filterDateDebut').value;
+            const dateFin = document.getElementById('filterDateFin').value;
+            if (dateDebut) filtered = filtered.filter(a => a.date >= dateDebut);
+            if (dateFin) filtered = filtered.filter(a => a.date <= dateFin);
+            const produitFiltre = document.getElementById('filterProduit').value;
+            if (produitFiltre) filtered = filtered.filter(a => a.produitId === produitFiltre);
+            const min = parseFloat(document.getElementById('filterMontantMin').value);
+            const max = parseFloat(document.getElementById('filterMontantMax').value);
+            if (!isNaN(min) && min >= 0) filtered = filtered.filter(a => a.total >= min);
+            if (!isNaN(max) && max >= 0) filtered = filtered.filter(a => a.total <= max);
+            filtered.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+            return filtered;
+        }
+
+        function renderAchats() {
+            const filtered = getFilteredAchats();
+            const tbody = document.getElementById('achatTableBody');
+            const emptyMsg = document.getElementById('emptyMessage');
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                filtered.forEach(a => {
+                    const cmd = commanditaires.find(c => c.id === a.commanditaireId);
+                    const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                    const prod = produits.find(p => p.id === a.produitId);
+                    const prodNom = prod ? prod.nom : 'Inconnu';
+                    const mes = mesures.find(m => m.id === a.mesureId);
+                    const mesNom = mes ? mes.nom : 'Inconnu';
+                    const commissionTotale = a.quantite * a.commission;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${a.date}</td>
+                        <td>${cmdNom}</td>
+                        <td>${a.acheteur || 'Inconnu'}</td>
+                        <td>${prodNom}</td>
+                        <td>${mesNom}</td>
+                        <td>${a.quantite}</td>
+                        <td>${a.prixUnitaire.toLocaleString()}</td>
+                        <td class="commission-amount">${commissionTotale.toLocaleString()}</td>
+                        <td>${a.total.toLocaleString()}</td>
+                        <td>${a.vendeurNom || ''} ${a.vendeurTel ? '('+a.vendeurTel+')' : ''}</td>
+                        <td>${a.commentaire || ''}</td>
+                        <td class="text-end">
+                            ${currentUser && currentUser.role === 'admin' ? `
+                            <button class="btn btn-sm btn-outline-warning edit-achat-btn" data-id="${a.id}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-achat-btn" data-id="${a.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            ` : ''}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Mettre à jour les stats
+            const total = filtered.reduce((sum, a) => sum + a.total, 0);
+            document.getElementById('totalDepenses').textContent = total.toLocaleString() + ' FCFA';
+            document.getElementById('nbAchats').textContent = filtered.length;
+
+            // Solde restant : total approv - total achats
+            const totalApprov = approvisionnements.reduce((s, a) => s + a.montant, 0);
+            const solde = totalApprov - achats.reduce((s, a) => s + a.total, 0);
+            document.getElementById('soldeRestant').textContent = solde.toLocaleString() + ' FCFA';
+            document.getElementById('soldeApprov').textContent = totalApprov.toLocaleString() + ' FCFA';
+
+            // Commission balance
+            const commTotal = achats.reduce((sum, a) => sum + a.quantite * a.commission, 0);
+            commissionBalance = commTotal;
+            document.getElementById('commissionTotal').textContent = commTotal.toLocaleString() + ' FCFA';
+            document.getElementById('nbHistorique').textContent = achats.length + ' entrées';
+
+            // Attacher événements edit/delete (admin)
+            if (currentUser && currentUser.role === 'admin') {
+                document.querySelectorAll('.edit-achat-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        const achat = achats.find(a => a.id === id);
+                        if (achat) {
+                            document.getElementById('achatId').value = achat.id;
+                            document.getElementById('selectProduit').value = achat.produitId;
+                            document.getElementById('selectMesure').value = achat.mesureId;
+                            document.getElementById('quantite').value = achat.quantite;
+                            document.getElementById('prixUnitaire').value = achat.prixUnitaire;
+                            document.getElementById('achatDate').value = achat.date;
+                            document.getElementById('achatCommentaire').value = achat.commentaire || '';
+                            document.getElementById('vendeurNom').value = achat.vendeurNom || '';
+                            document.getElementById('vendeurTel').value = achat.vendeurTel || '';
+                            updateTotaux();
+                            document.getElementById('btnSaveAchat').innerHTML = '<i class="bi bi-arrow-repeat"></i> Mettre à jour';
+                            if (currentUser.role === 'admin') {
+                                document.getElementById('selectCommanditaire').value = achat.commanditaireId;
+                            }
+                            document.getElementById('achatForm').scrollIntoView({ behavior: 'smooth' });
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.delete-achat-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        if (confirm('Supprimer cet achat ?')) {
+                            // Supprimer dans Firebase
+                            deleteData('achats/' + id).then(() => {
+                                // La mise à jour se fera via le listener
+                            }).catch(err => console.error(err));
+                        }
+                    });
+                });
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('achatId').value = '';
+            document.getElementById('selectProduit').value = '';
+            document.getElementById('selectMesure').value = '';
+            document.getElementById('quantite').value = '';
+            document.getElementById('prixUnitaire').value = '';
+            document.getElementById('commission').value = '';
+            document.getElementById('commissionDetail').textContent = '0 FCFA';
+            document.getElementById('totalAchat').value = '';
+            document.getElementById('vendeurNom').value = '';
+            document.getElementById('vendeurTel').value = '';
+            document.getElementById('achatDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('achatCommentaire').value = '';
+            document.getElementById('btnSaveAchat').innerHTML = '<i class="bi bi-check-lg"></i> Enregistrer';
+            // Restaurer les derniers choix
+            const lastProduit = localStorage.getItem('lastProduit');
+            const lastMesure = localStorage.getItem('lastMesure');
+            const lastPrixUnitaire = localStorage.getItem('lastPrixUnitaire');
+            const lastCommanditaire = localStorage.getItem('lastCommanditaire');
+            if (lastProduit) document.getElementById('selectProduit').value = lastProduit;
+            if (lastMesure) document.getElementById('selectMesure').value = lastMesure;
+            if (lastPrixUnitaire) document.getElementById('prixUnitaire').value = lastPrixUnitaire;
+            if (lastCommanditaire && currentUser && currentUser.role === 'admin') {
+                document.getElementById('selectCommanditaire').value = lastCommanditaire;
+            }
+            updateTotaux();
+        }
+
+        function showSuccessMessage() {
+            const overlay = document.getElementById('successOverlay');
+            overlay.classList.add('active');
+            setTimeout(() => overlay.classList.remove('active'), 2000);
+        }
+
+        // ─── Fonction pour envoyer le message WhatsApp ──────────────────
+
+        function sendWhatsAppMessage(achatData) {
+            // Récupérer le numéro WhatsApp
+            const phone = whatsappNumber.replace(/\s/g, ''); // enlever les espaces
+            if (!phone || phone === '') {
+                console.warn('Numéro WhatsApp non défini, message non envoyé.');
+                return;
+            }
+
+            // Construire le message
+            const cmd = commanditaires.find(c => c.id === achatData.commanditaireId);
+            const cmdNom = cmd ? cmd.nom : 'Inconnu';
+            const prod = produits.find(p => p.id === achatData.produitId);
+            const prodNom = prod ? prod.nom : 'Inconnu';
+            const mes = mesures.find(m => m.id === achatData.mesureId);
+            const mesNom = mes ? mes.nom : 'Inconnu';
+            const commissionTotale = achatData.quantite * achatData.commission;
+
+            // Calcul des soldes
+            const totalApprovCmd = approvisionnements
+                .filter(a => a.commanditaireId === achatData.commanditaireId)
+                .reduce((s, a) => s + a.montant, 0);
+            const totalAchatsCmd = achats
+                .filter(a => a.commanditaireId === achatData.commanditaireId)
+                .reduce((s, a) => s + a.total, 0);
+            const soldeCmd = totalApprovCmd - totalAchatsCmd;
+
+            const totalApprovGlobal = approvisionnements.reduce((s, a) => s + a.montant, 0);
+            const totalAchatsGlobal = achats.reduce((s, a) => s + a.total, 0);
+            const soldeGlobal = totalApprovGlobal - totalAchatsGlobal;
+
+            // Construction du message avec émoticônes
+            const dateFormatted = new Date(achatData.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const message =
+                `📋 *NOUVEL ACHAT ENREGISTRÉ* 📋\n\n` +
+                `📅 Date : ${dateFormatted}\n` +
+                `👤 Commanditaire : ${cmdNom}\n` +
+                `🛒 Produit : ${prodNom}\n` +
+                `📏 Mesure : ${mesNom}\n` +
+                `🔢 Quantité : ${achatData.quantite}\n` +
+                `💰 Prix unitaire : ${achatData.prixUnitaire.toLocaleString()} FCFA\n` +
+                `💵 Commission totale : ${commissionTotale.toLocaleString()} FCFA\n` +
+                `💳 Total à payer : ${achatData.total.toLocaleString()} FCFA\n` +
+                `🧑‍🌾 Vendeur : ${achatData.vendeurNom || 'Non précisé'} ${achatData.vendeurTel ? '('+achatData.vendeurTel+')' : ''}\n` +
+                `📝 Commentaire : ${achatData.commentaire || 'Aucun'}\n` +
+                `👤 Acheteur : ${achatData.acheteur || 'Inconnu'}\n\n` +
+                `📊 *RÉCAPITULATIF DES SOLDES* 📊\n` +
+                `💼 Solde du commanditaire (${cmdNom}) : ${soldeCmd.toLocaleString()} FCFA\n` +
+                `🌍 Solde général : ${soldeGlobal.toLocaleString()} FCFA\n\n` +
+                `✅ Merci d'avoir utilisé AgriAchat !`;
+
+            // Encoder le message pour URL
+            const encodedMessage = encodeURIComponent(message);
+            const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
+
+            // Ouvrir WhatsApp dans un nouvel onglet
+            window.open(url, '_blank');
+        }
+
+        // ─── Initialisation des écouteurs en temps réel ──────────────────
+
+        function initRealtimeListeners() {
+            // Commanditaires
+            listenData('commanditaires', (data) => {
+                commanditaires = data;
+                populateSelects();
+                renderAchats();
+            });
+            // Produits
+            listenData('produits', (data) => {
+                produits = data;
+                populateSelects();
+                renderAchats();
+            });
+            // Mesures
+            listenData('mesures', (data) => {
+                mesures = data;
+                populateSelects();
+                renderAchats();
+            });
+            // Commissions
+            listenData('commissions', (data) => {
+                commissions = data;
+                updateTotaux();
+                renderAchats();
+            });
+            // Approvisionnements
+            listenData('approvisionnements', (data) => {
+                approvisionnements = data;
+                renderAchats();
+            });
+            // Achats
+            listenData('achats', (data) => {
+                achats = data;
+                renderAchats();
+            });
+            // Utilisateurs (pour la session, déjà chargée)
+            listenData('users', (data) => {
+                users = data;
+                // On vérifie si l'utilisateur courant existe toujours
+                const currentUserId = localStorage.getItem('agri_current_user_id');
+                if (!users.find(u => u.id === currentUserId)) {
+                    // Déconnecter
+                    localStorage.removeItem('agri_current_user_id');
+                    window.location.href = 'login.html';
+                }
+            });
+            // Numéro WhatsApp
+            database.ref('settings/whatsappNumber').on('value', (snap) => {
+                whatsappNumber = snap.val() || '+22997744035';
+                document.getElementById('whatsappDisplay').textContent = whatsappNumber;
+            });
+        }
+
+        // ─── Événements du formulaire ────────────────────────────────────
+
+        function initFormEvents() {
+            const form = document.getElementById('achatForm');
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const commanditaireId = getSelectedCommanditaireId();
+                const produitId = document.getElementById('selectProduit').value;
+                const mesureId = document.getElementById('selectMesure').value;
+                const quantite = parseFloat(document.getElementById('quantite').value);
+                const prixUnitaire = parseFloat(document.getElementById('prixUnitaire').value);
+                const date = document.getElementById('achatDate').value;
+                const commentaire = document.getElementById('achatCommentaire').value.trim();
+                const vendeurNom = document.getElementById('vendeurNom').value.trim();
+                const vendeurTel = document.getElementById('vendeurTel').value.trim();
+                const acheteur = currentUser.name || 'Utilisateur';
+
+                if (!commanditaireId) {
+                    alert('Veuillez sélectionner un commanditaire.');
+                    return;
+                }
+                if (!produitId || !mesureId) {
+                    alert('Veuillez sélectionner un produit et une mesure.');
+                    return;
+                }
+                if (!quantite || quantite <= 0) {
+                    alert('Veuillez saisir une quantité valide (>0).');
+                    return;
+                }
+                if (!prixUnitaire || prixUnitaire <= 0) {
+                    alert('Veuillez saisir un prix unitaire valide (>0).');
+                    return;
+                }
+                if (!date) {
+                    alert('Veuillez saisir une date.');
+                    return;
+                }
+
+                const commission = calculerCommission(produitId, mesureId);
+                const commissionTotale = quantite * commission;
+                const total = quantite * prixUnitaire + commissionTotale;
+
+                const id = document.getElementById('achatId').value;
+                const achatObj = {
+                    commanditaireId,
+                    produitId,
+                    mesureId,
+                    quantite,
+                    prixUnitaire,
+                    commission,
+                    total,
+                    date,
+                    commentaire,
+                    vendeurNom,
+                    vendeurTel,
+                    acheteur
+                };
+
+                try {
+                    if (id) {
+                        // Modification
+                        await writeData('achats/' + id, achatObj);
+                    } else {
+                        // Ajout : génère un ID Firebase
+                        const newRef = database.ref('achats').push();
+                        await newRef.set(achatObj);
+                    }
+                    // Sauvegarder les derniers choix
+                    localStorage.setItem('lastProduit', produitId);
+                    localStorage.setItem('lastMesure', mesureId);
+                    localStorage.setItem('lastPrixUnitaire', prixUnitaire);
+                    if (currentUser.role === 'admin') {
+                        localStorage.setItem('lastCommanditaire', commanditaireId);
+                    }
+                    resetForm();
+                    showSuccessMessage();
+
+                    // Envoyer le message WhatsApp (après succès)
+                    sendWhatsAppMessage(achatObj);
+
+                } catch (err) {
+                    console.error('Erreur enregistrement achat :', err);
+                    alert('Erreur lors de l\'enregistrement. Vérifiez votre connexion.');
+                }
+            });
+
+            // Mise à jour des totaux
+            document.getElementById('selectProduit').addEventListener('change', updateTotaux);
+            document.getElementById('selectMesure').addEventListener('change', updateTotaux);
+            document.getElementById('quantite').addEventListener('input', updateTotaux);
+            document.getElementById('prixUnitaire').addEventListener('input', updateTotaux);
+
+            // Filtres
+            document.getElementById('btnApplyFilters').addEventListener('click', renderAchats);
+            document.getElementById('selectCommanditaire').addEventListener('change', renderAchats);
+
+            // Toggle historique
+            const histContainer = document.getElementById('historiqueContainer');
+            const toggleBtn = document.getElementById('toggleHistoriqueBtn');
+            toggleBtn.addEventListener('click', function() {
+                if (histContainer.style.display === 'none') {
+                    histContainer.style.display = 'block';
+                    toggleBtn.innerHTML = '<i class="bi bi-eye-slash me-1"></i> Masquer l\'historique';
+                } else {
+                    histContainer.style.display = 'none';
+                    toggleBtn.innerHTML = '<i class="bi bi-eye me-1"></i> Afficher l\'historique';
+                }
+            });
+
+            // Toggle filtres
+            const filterRow = document.getElementById('filterRow');
+            document.getElementById('toggleFilterBtn').addEventListener('click', function() {
+                filterRow.classList.toggle('visible');
+                this.innerHTML = filterRow.classList.contains('visible') ?
+                    '<i class="bi bi-funnel me-1"></i> Masquer les filtres' :
+                    '<i class="bi bi-funnel me-1"></i> Afficher les filtres';
+            });
+
+            // Export CSV
+            document.getElementById('btnExportCSV').addEventListener('click', function() {
+                const filtered = getFilteredAchats();
+                if (filtered.length === 0) {
+                    alert('Aucune donnée à exporter.');
+                    return;
+                }
+                let csv = 'Date,Commanditaire,Acheteur,Produit,Mesure,Quantité,Prix unitaire,Commission,Total,Vendeur,Commentaire\n';
+                filtered.forEach(a => {
+                    const cmd = commanditaires.find(c => c.id === a.commanditaireId);
+                    const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                    const prod = produits.find(p => p.id === a.produitId);
+                    const prodNom = prod ? prod.nom : 'Inconnu';
+                    const mes = mesures.find(m => m.id === a.mesureId);
+                    const mesNom = mes ? mes.nom : 'Inconnu';
+                    const commissionTotale = a.quantite * a.commission;
+                    csv += `${a.date},${cmdNom},${a.acheteur||''},${prodNom},${mesNom},${a.quantite},${a.prixUnitaire},${commissionTotale},${a.total},"${a.vendeurNom||''}","${a.commentaire||''}"\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'achats.csv';
+                link.click();
+                URL.revokeObjectURL(link.href);
+            });
+
+            // Retirer commission
+            document.getElementById('btnRetirerCommission').addEventListener('click', function() {
+                if (commissionBalance <= 0) {
+                    alert('Aucune commission à retirer.');
+                    return;
+                }
+                if (confirm('Retirer les commissions d\'un montant de ' + commissionBalance.toLocaleString() + ' FCFA ? Cette opération déduira ce montant du solde disponible.')) {
+                    const montantNegatif = -commissionBalance;
+                    const newRef = database.ref('approvisionnements').push();
+                    newRef.set({
+                        montant: montantNegatif,
+                        date: new Date().toISOString().split('T')[0],
+                        commentaire: 'Retrait de commissions',
+                        commanditaireId: getSelectedCommanditaireId() || 'admin'
+                    }).then(() => {
+                        alert('Commission retirée avec succès.');
+                    }).catch(err => {
+                        console.error(err);
+                        alert('Erreur lors du retrait.');
+                    });
+                }
+            });
+
+            // Clic sur la carte des commissions => modal
+            document.getElementById('commissionStatCard').addEventListener('click', function() {
+                const modalBody = document.getElementById('commissionModalBody');
+                const modalTotal = document.getElementById('commissionModalTotal');
+                modalBody.innerHTML = '';
+                let totalComm = 0;
+                const achatsComm = achats.filter(a => a.commission > 0);
+                if (achatsComm.length === 0) {
+                    modalBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox fs-2 d-block mb-2"></i>Aucune commission enregistrée.</td></tr>`;
+                } else {
+                    achatsComm.forEach(a => {
+                        const cmd = commanditaires.find(c => c.id === a.commanditaireId);
+                        const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                        const prod = produits.find(p => p.id === a.produitId);
+                        const prodNom = prod ? prod.nom : 'Inconnu';
+                        const mes = mesures.find(m => m.id === a.mesureId);
+                        const mesNom = mes ? mes.nom : 'Inconnu';
+                        const commTot = a.quantite * a.commission;
+                        totalComm += commTot;
+                        const tr = document.createElement('tr');
+                        tr.className = 'commission-detail-row';
+                        tr.innerHTML = `
+                            <td>${a.date}</td>
+                            <td>${cmdNom}</td>
+                            <td>${prodNom}</td>
+                            <td>${mesNom}</td>
+                            <td>${a.quantite}</td>
+                            <td>${a.commission.toLocaleString()}</td>
+                            <td class="commission-amount">${commTot.toLocaleString()} FCFA</td>
+                            <td class="text-end">
+                                ${currentUser.role === 'admin' ? `
+                                <button class="btn btn-sm btn-outline-danger delete-commission-btn" data-id="${a.id}" title="Supprimer cette commission">
+                                    <i class="bi bi-trash"></i>
+                                </button>` : ''}
+                            </td>
+                        `;
+                        modalBody.appendChild(tr);
+                    });
+                    // Attacher événements delete
+                    if (currentUser.role === 'admin') {
+                        document.querySelectorAll('.delete-commission-btn').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const id = this.dataset.id;
+                                if (confirm('Supprimer cet achat et sa commission associée ?')) {
+                                    deleteData('achats/' + id).catch(err => console.error(err));
+                                }
+                            });
+                        });
+                    }
+                }
+                modalTotal.textContent = totalComm.toLocaleString() + ' FCFA';
+                const modal = new bootstrap.Modal(document.getElementById('commissionModal'));
+                modal.show();
+            });
+
+            // ─── Gestion du numéro WhatsApp ──────────────────────────────
+
+            // Ouvrir la modale de déverrouillage
+            document.getElementById('btnModifyWhatsApp').addEventListener('click', function() {
+                const unlockModal = new bootstrap.Modal(document.getElementById('unlockModal'));
+                document.getElementById('unlockCodeInput').value = '';
+                document.getElementById('unlockError').classList.add('d-none');
+                unlockModal.show();
+            });
+
+            // Valider le code de déverrouillage
+            document.getElementById('btnUnlockConfirm').addEventListener('click', function() {
+                const code = document.getElementById('unlockCodeInput').value.trim();
+                // Code correct : 11984
+                if (code === '11984') {
+                    // Fermer la modale de déverrouillage
+                    const unlockModal = bootstrap.Modal.getInstance(document.getElementById('unlockModal'));
+                    unlockModal.hide();
+                    // Ouvrir la modale d'édition du numéro
+                    document.getElementById('newWhatsAppNumber').value = whatsappNumber;
+                    const editModal = new bootstrap.Modal(document.getElementById('editWhatsAppModal'));
+                    editModal.show();
+                } else {
+                    document.getElementById('unlockError').classList.remove('d-none');
+                }
+            });
+
+            // Permettre l'envoi avec la touche Entrée dans le champ code
+            document.getElementById('unlockCodeInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('btnUnlockConfirm').click();
+                }
+            });
+
+            // Enregistrer le nouveau numéro
+            document.getElementById('btnSaveWhatsApp').addEventListener('click', function() {
+                const newNumber = document.getElementById('newWhatsAppNumber').value.trim();
+                if (!newNumber) {
+                    alert('Veuillez saisir un numéro valide.');
+                    return;
+                }
+                // Enregistrer dans Firebase
+                writeData('settings/whatsappNumber', newNumber).then(() => {
+                    const editModal = bootstrap.Modal.getInstance(document.getElementById('editWhatsAppModal'));
+                    editModal.hide();
+                    alert('Numéro WhatsApp mis à jour avec succès.');
+                }).catch(err => {
+                    console.error(err);
+                    alert('Erreur lors de la mise à jour.');
+                });
+            });
+        }
+
+        // ─── Lancement ────────────────────────────────────────────────────
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initSession();
+            // Si l'utilisateur n'est pas connecté, initSession redirige, donc on continue seulement si currentUser existe
+            if (!currentUser) return;
+
+            // Afficher la ligne admin si nécessaire
+            if (currentUser.role === 'admin') {
+                document.getElementById('adminSelectRow').style.display = 'flex';
+            }
+
+            // Initialiser les listes déroulantes
+            populateSelects();
+
+            // Initialiser la date
+            document.getElementById('achatDate').value = new Date().toISOString().split('T')[0];
+
+            // Restaurer les derniers choix
+            const lastProduit = localStorage.getItem('lastProduit');
+            const lastMesure = localStorage.getItem('lastMesure');
+            const lastPrixUnitaire = localStorage.getItem('lastPrixUnitaire');
+            const lastCommanditaire = localStorage.getItem('lastCommanditaire');
+            if (lastProduit) document.getElementById('selectProduit').value = lastProduit;
+            if (lastMesure) document.getElementById('selectMesure').value = lastMesure;
+            if (lastPrixUnitaire) document.getElementById('prixUnitaire').value = lastPrixUnitaire;
+            if (lastCommanditaire && currentUser.role === 'admin') {
+                document.getElementById('selectCommanditaire').value = lastCommanditaire;
+            }
+            updateTotaux();
+
+            // Mettre en place les écouteurs temps réel
+            initRealtimeListeners();
+
+            // Initialiser les événements du formulaire
+            initFormEvents();
+
+            // Afficher l'historique par défaut (caché)
+            document.getElementById('historiqueContainer').style.display = 'none';
+        });
+    </script>
+
+    <!-- Script d'enregistrement du Service Worker et gestion de l'installation PWA -->
+    <script>
+        (function() {
+            // Enregistrement du service worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker enregistré avec succès :', registration);
+                    })
+                    .catch((error) => {
+                        console.error('Échec de l\'enregistrement du Service Worker :', error);
+                    });
+            }
+
+            // Gestion du bouton d'installation
+            const installBtn = document.getElementById('installBtn');
+            let deferredPrompt = null;
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                installBtn.style.display = 'flex';
+            });
+
+            window.addEventListener('appinstalled', () => {
+                installBtn.style.display = 'none';
+                deferredPrompt = null;
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        console.log('Installation acceptée');
+                        installBtn.style.display = 'none';
+                    } else {
+                        console.log('Installation refusée');
+                    }
+                    deferredPrompt = null;
+                } else {
+                    alert('L\'installation n\'est pas disponible pour le moment.');
+                }
+            });
+        })();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - Gestion des Achats Agricoles</title>
+    <!-- Lien vers le manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --color-primary-dark: #144670;
+            --color-primary-medium: #3C6AA6;
+            --color-primary-light: #E6F2FF;
+            --color-alert-bright: #E01A1A;
+            --color-background-base: #FFFFFF;
+            --color-text-primary: #1A1A1A;
+            --color-text-secondary: #808080;
+            --color-text-on-primary: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Roboto', 'Open Sans', sans-serif;
+            background-color: #f8f9fa;
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-custom {
+            background-color: var(--color-primary-dark) !important;
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: var(--color-text-on-primary) !important;
+        }
+
+        .navbar-custom .nav-link.active {
+            font-weight: 700;
+            border-bottom: 3px solid #fff;
+        }
+
+        .navbar-custom .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .navbar-custom .nav-link.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .user-info {
+            color: var(--color-text-on-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .user-info .badge-role-nav {
+            background-color: rgba(255,255,255,0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .btn-custom-primary {
+            background-color: var(--color-primary-medium);
+            color: var(--color-text-on-primary);
+            border: none;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-custom-primary:hover {
+            background-color: var(--color-primary-dark);
+            color: var(--color-text-on-primary);
+        }
+
+        .section-title {
+            color: var(--color-primary-dark);
+            font-weight: 600;
+            border-bottom: 2px solid var(--color-primary-light);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(20, 70, 112, 0.08);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            background-color: var(--color-primary-light);
+            color: var(--color-primary-dark);
+            font-weight: 600;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            text-align: center;
+            height: 100%;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            color: var(--color-primary-medium);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--color-primary-dark);
+        }
+
+        .stat-label {
+            color: var(--color-text-secondary);
+            font-size: 0.95rem;
+        }
+
+        footer {
+            background-color: var(--color-primary-dark);
+            color: var(--color-text-on-primary);
+            padding: 15px 0;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        footer a {
+            color: var(--color-text-on-primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Bouton d'installation flottant */
+        #installContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: none;
+        }
+        #installBtn {
+            background-color: var(--color-primary-dark);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            transition: background-color 0.2s;
+        }
+        #installBtn:hover {
+            background-color: var(--color-primary-medium);
+        }
+        #installBtn i {
+            margin-right: 8px;
+        }
+
+        /* Statut de connexion permanent */
+        #connectionStatus {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+        }
+        #connectionStatus.online {
+            background-color: #198754;
+            color: white;
+        }
+        #connectionStatus.offline {
+            background-color: #dc3545;
+            color: white;
+        }
+        #connectionStatus i {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-tree-fill me-2"></i> AgriAchat
+                <!-- Toast permanent : statut en ligne / hors ligne -->
+                <span id="connectionStatus" class="online">
+                    <i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <!-- Liens dynamiques -->
+                    <li class="nav-item" id="nav-dashboard">
+                        <a class="nav-link active" aria-current="page" href="index.html"><i class="bi bi-speedometer2 me-1"></i> Tableau de bord</a>
+                    </li>
+                    <li class="nav-item" id="nav-achats">
+                        <a class="nav-link" href="achat.html"><i class="bi bi-cart-plus me-1"></i> Achats</a>
+                    </li>
+                    <li class="nav-item" id="nav-approv">
+                        <a class="nav-link" href="approv.html"><i class="bi bi-wallet2 me-1"></i> Approvisionnement</a>
+                    </li>
+                    <li class="nav-item" id="nav-compta">
+                        <a class="nav-link" href="comptabilite.html"><i class="bi bi-calculator me-1"></i> Comptabilité</a>
+                    </li>
+                    <li class="nav-item" id="nav-inventaire">
+                        <a class="nav-link" href="point.html"><i class="bi bi-boxes me-1"></i> Inventaire</a>
+                    </li>
+                    <li class="nav-item" id="nav-parametres">
+                        <a class="nav-link" href="parametres.html"><i class="bi bi-gear me-1"></i> Paramètres</a>
+                    </li>
+                    <!-- Infos utilisateur + déconnexion -->
+                    <li class="nav-item">
+                        <span class="user-info" id="userInfoNav">
+                            <span id="navUserName">—</span>
+                            <span class="badge-role-nav" id="navUserRole">—</span>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm" id="logoutBtn">
+                            <i class="bi bi-box-arrow-right me-1"></i> Déconnecter
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4 flex-grow-1">
+        <h2 class="section-title"><i class="bi bi-speedometer2 me-2"></i> Tableau de bord</h2>
+
+        <!-- Statistiques -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-3 col-6">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-people"></i></div>
+                    <div class="stat-number" id="statCommanditaires">0</div>
+                    <div class="stat-label">Commanditaires</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+                    <div class="stat-number" id="statProduits">0</div>
+                    <div class="stat-label">Produits</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-rulers"></i></div>
+                    <div class="stat-number" id="statMesures">0</div>
+                    <div class="stat-label">Mesures</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-coin"></i></div>
+                    <div class="stat-number" id="statCommissions">0</div>
+                    <div class="stat-label">Commissions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Solde (carte unique, sans "À propos") -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-wallet2 me-2"></i> Solde disponible
+                    </div>
+                    <div class="card-body">
+                        <div class="display-4" id="dashboardBalance">0 FCFA</div>
+                        <p class="text-muted mt-2">Dernière mise à jour : <span id="lastUpdate">—</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            Conçu par <strong>Atizoun Plateny AMOUSSOU</strong> - 
+            <a href="mailto:atizoun@gmail.com">atizoun@gmail.com</a> - 
+            <a href="tel:0197744035">01 97 74 40 35</a>
+        </div>
+    </footer>
+
+    <!-- Bouton d'installation flottant -->
+    <div id="installContainer">
+        <button id="installBtn" class="btn">
+            <i class="bi bi-download"></i> Installer l'application
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ============================================================= -->
+    <!--          INITIALISATION FIREBASE & FONCTIONS DE BASE            -->
+    <!-- ============================================================= -->
+    <script>
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsmRMJCtxsOkf3rCylpuTCcm4pnObvRK0",
+            authDomain: "regachat-ad0e9.firebaseapp.com",
+            databaseURL: "https://regachat-ad0e9-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "regachat-ad0e9",
+            storageBucket: "regachat-ad0e9.firebasestorage.app",
+            messagingSenderId: "809503223361",
+            appId: "1:809503223361:web:bbcf81fea1a6afdd86e0c0"
+        };
+
+        // Initialiser Firebase (compat)
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // =============================================================
+        //  GESTION DU STATUT DE CONNEXION (toast permanent)
+        // =============================================================
+        const statusEl = document.getElementById('connectionStatus');
+        const statusText = document.getElementById('statusText');
+
+        // Écouter l'état de connexion Firebase
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            const isConnected = snap.val() === true;
+            if (isConnected) {
+                statusEl.className = 'online';
+                statusText.textContent = 'En ligne';
+                statusEl.innerHTML = '<i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>';
+            } else {
+                statusEl.className = 'offline';
+                statusText.textContent = 'Hors ligne';
+                statusEl.innerHTML = '<i class="bi bi-wifi-off"></i> <span id="statusText">Hors ligne</span>';
+            }
+        });
+
+        // Écouter les événements navigator.onLine / offLine pour mise à jour supplémentaire
+        window.addEventListener('online', () => {});
+        window.addEventListener('offline', () => {});
+
+        // =============================================================
+        //  FONCTIONS D'ACCÈS AUX DONNÉES (Firebase) - AVEC ID EXPLICITE
+        // =============================================================
+        async function getUsers() {
+            const snapshot = await database.ref('users').once('value');
+            const val = snapshot.val();
+            return val ? Object.entries(val).map(([id, values]) => ({ id, ...values })) : [];
+        }
+
+        async function getCommanditaires() {
+            const snapshot = await database.ref('commanditaires').once('value');
+            const val = snapshot.val();
+            return val ? Object.entries(val).map(([id, values]) => ({ id, ...values })) : [];
+        }
+
+        async function getProduits() {
+            const snapshot = await database.ref('produits').once('value');
+            const val = snapshot.val();
+            return val ? Object.entries(val).map(([id, values]) => ({ id, ...values })) : [];
+        }
+
+        async function getMesures() {
+            const snapshot = await database.ref('mesures').once('value');
+            const val = snapshot.val();
+            return val ? Object.entries(val).map(([id, values]) => ({ id, ...values })) : [];
+        }
+
+        async function getCommissions() {
+            const snapshot = await database.ref('commissions').once('value');
+            const val = snapshot.val();
+            return val ? Object.entries(val).map(([id, values]) => ({ id, ...values })) : [];
+        }
+
+        // =============================================================
+        //  SCRIPT PRINCIPAL (remplacement du localStorage)
+        // =============================================================
+        document.addEventListener('DOMContentLoaded', async function() {
+
+            // --- 1. Gestion de la session utilisateur ---
+            let users = [];
+            try {
+                users = await getUsers();
+                // Si la base est vide, créer des utilisateurs par défaut avec ID fixes
+                if (users.length === 0) {
+                    const defaultUsers = [
+                        { id: "1", name: "Directeur Général (Admin)", role: "admin", password: "1234", email: "admin@agriachat.com" },
+                        { id: "2", name: "Acheteur Central", role: "acheteur", password: "5678", email: "acheteur@agriachat.com" }
+                    ];
+                    for (const u of defaultUsers) {
+                        await database.ref('users/' + u.id).set({
+                            name: u.name,
+                            role: u.role,
+                            password: u.password,
+                            email: u.email
+                        });
+                    }
+                    users = defaultUsers;
+                }
+            } catch (err) {
+                console.error('Erreur chargement utilisateurs :', err);
+                alert('Impossible de charger les utilisateurs. Vérifiez votre connexion.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const currentUserId = localStorage.getItem('agri_current_user_id');
+            let currentUser = users.find(u => u.id === currentUserId);
+            if (!currentUser) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Mettre à jour les infos utilisateur dans la nav
+            document.getElementById('navUserName').textContent = currentUser.name || 'Utilisateur';
+            document.getElementById('navUserRole').textContent = currentUser.role ? currentUser.role.toUpperCase() : '';
+
+            // Bouton déconnexion
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                localStorage.removeItem('agri_current_user_id');
+                window.location.href = 'login.html';
+            });
+
+            // --- 2. Gestion de la navigation (masquer selon rôle) ---
+            const role = currentUser.role;
+            const navApprov = document.getElementById('nav-approv');
+            const navCompta = document.getElementById('nav-compta');
+            const navInventaire = document.getElementById('nav-inventaire');
+            const navParametres = document.getElementById('nav-parametres');
+
+            if (role !== 'admin') {
+                if (navApprov) navApprov.style.display = 'none';
+                if (navCompta) navCompta.style.display = 'none';
+                if (navInventaire) navInventaire.style.display = 'none';
+                if (navParametres) navParametres.style.display = 'none';
+            }
+
+            // --- 3. Chargement des statistiques (commanditaires, produits, mesures, commissions) ---
+            try {
+                const [commanditaires, produits, mesures, commissions] = await Promise.all([
+                    getCommanditaires(),
+                    getProduits(),
+                    getMesures(),
+                    getCommissions()
+                ]);
+
+                document.getElementById('statCommanditaires').textContent = commanditaires.length;
+                document.getElementById('statProduits').textContent = produits.length;
+                document.getElementById('statMesures').textContent = mesures.length;
+                document.getElementById('statCommissions').textContent = commissions.length;
+
+            } catch (err) {
+                console.error('Erreur chargement des statistiques :', err);
+                alert('Erreur lors du chargement des statistiques. Veuillez réessayer.');
+            }
+
+            // =============================================================
+            //  --- 4. MISE EN PLACE DU CALCUL DU SOLDE EN TEMPS RÉEL ---
+            //  (remplace l'écouteur sur le nœud "balance")
+            // =============================================================
+
+            const dashboardBalance = document.getElementById('dashboardBalance');
+            const lastUpdate = document.getElementById('lastUpdate');
+
+            // Variables pour stocker les données
+            let approvisionnements = [];
+            let achats = [];
+            let livraisons = [];
+
+            // Fonction de calcul du solde
+            function calculerSolde() {
+                // Somme des approvisionnements
+                const totalApprov = approvisionnements.reduce((sum, a) => sum + (a.montant || 0), 0);
+
+                // Somme des achats (total)
+                const totalAchats = achats.reduce((sum, a) => sum + (a.total || 0), 0);
+
+                // Somme des commissions (déjà incluses dans le total des achats ? 
+                // Dans la page compta, on additionne commissions séparément si elles sont dans les achats.
+                // On va faire comme dans la page compta : extraire les commissions des achats.
+                const totalCommissions = achats.reduce((sum, a) => sum + ((a.quantite || 0) * (a.commission || 0)), 0);
+
+                // Somme des frais de livraison déduits
+                let totalFrais = 0;
+                livraisons.forEach(liv => {
+                    if (liv.deduireApprov && liv.frais && Array.isArray(liv.frais)) {
+                        const total = liv.frais.reduce((s, f) => s + (f.montant || 0), 0);
+                        totalFrais += total;
+                    }
+                });
+
+                // Solde = approvisionnements - achats - commissions - frais
+                const solde = totalApprov - totalAchats - totalCommissions - totalFrais;
+                return solde;
+            }
+
+            // Mise à jour de l'affichage
+            function updateSolde() {
+                const solde = calculerSolde();
+                dashboardBalance.textContent = solde.toFixed(0) + ' FCFA';
+                lastUpdate.textContent = new Date().toLocaleString();
+            }
+
+            // Écouter les approvisionnements
+            database.ref('approvisionnements').on('value', (snap) => {
+                const data = snap.val();
+                approvisionnements = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                updateSolde();
+            });
+
+            // Écouter les achats
+            database.ref('achats').on('value', (snap) => {
+                const data = snap.val();
+                achats = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                updateSolde();
+            });
+
+            // Écouter les livraisons (pour les frais)
+            database.ref('livraisons').on('value', (snap) => {
+                const data = snap.val();
+                livraisons = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                updateSolde();
+            });
+
+            // Initialisation : si aucune donnée, le solde reste à 0
+            // On peut aussi forcer un premier affichage
+            updateSolde();
+
+            // Nota : on ne lit plus le nœud "balance" car le solde est calculé dynamiquement.
+            // Cependant, on peut garder l'initialisation du nœud pour compatibilité avec d'autres pages
+            // mais ce n'est pas obligatoire.
+
+        });
+    </script>
+
+    <!-- Enregistrement du service worker (PWA) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then((registration) => {
+                    console.log('Service Worker enregistré avec succès :', registration);
+                })
+                .catch((error) => {
+                    console.error('Échec de l\'enregistrement du Service Worker :', error);
+                });
+        }
+    </script>
+
+    <!-- Gestion du bouton d'installation (PWA) -->
+    <script>
+        (function() {
+            let deferredPrompt = null;
+            const installContainer = document.getElementById('installContainer');
+            const installBtn = document.getElementById('installBtn');
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                installContainer.style.display = 'block';
+                console.log('beforeinstallprompt déclenché');
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    console.log('Résultat du choix utilisateur :', result);
+                    installContainer.style.display = 'none';
+                    deferredPrompt = null;
+                } else {
+                    alert('L\'installation est déjà disponible ou non prise en charge par ce navigateur.');
+                }
+            });
+
+            window.addEventListener('appinstalled', () => {
+                installContainer.style.display = 'none';
+                deferredPrompt = null;
+                console.log('Application installée avec succès');
+            });
+        })();
+    </script>
+
+</body>
+</html>

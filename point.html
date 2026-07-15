@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventaire - Gestion des Achats Agricoles</title>
+    <!-- Lien vers le manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --color-primary-dark: #0d3b5e;
+            --color-primary-medium: #2a6f97;
+            --color-primary-light: #c9e4f0;
+            --color-accent: #f9a826;
+            --color-alert-bright: #E01A1A;
+            --color-background-base: #FFFFFF;
+            --color-text-primary: #1A1A1A;
+            --color-text-secondary: #555;
+            --color-text-on-primary: #FFFFFF;
+            --gradient-bg: linear-gradient(135deg, #0d3b5e 0%, #2a6f97 100%);
+            --gradient-card: linear-gradient(145deg, #ffffff, #f2f6fa);
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-info: #17a2b8;
+        }
+
+        body {
+            font-family: 'Roboto', 'Open Sans', sans-serif;
+            background: #e8f0f7;
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-custom {
+            background: var(--gradient-bg) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: var(--color-text-on-primary) !important;
+            font-weight: 500;
+        }
+
+        .navbar-custom .nav-link.active {
+            font-weight: 700;
+            border-bottom: 3px solid var(--color-accent);
+        }
+
+        .navbar-custom .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+        }
+
+        .navbar-custom .nav-link.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .user-info {
+            color: var(--color-text-on-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .user-info .badge-role-nav {
+            background-color: rgba(255,255,255,0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .btn-custom-primary {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(42, 111, 151, 0.3);
+        }
+
+        .btn-custom-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(42, 111, 151, 0.4);
+            background: var(--color-primary-dark);
+            color: #fff;
+        }
+
+        .section-title {
+            color: var(--color-primary-dark);
+            font-weight: 700;
+            border-bottom: 3px solid var(--color-accent);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            background: var(--gradient-card);
+            box-shadow: 0 8px 24px rgba(13, 59, 94, 0.10);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(13, 59, 94, 0.15);
+        }
+
+        .card-header {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            font-weight: 600;
+            border-bottom: none;
+            border-radius: 16px 16px 0 0 !important;
+            padding: 0.75rem 1.25rem;
+        }
+
+        /* Plaquette des statistiques */
+        .stats-plaquette {
+            background: var(--gradient-card);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(13, 59, 94, 0.10);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-plaquette .stat-item {
+            text-align: center;
+            padding: 0.25rem 0.5rem;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .stats-plaquette .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stats-plaquette .stat-icon {
+            font-size: 1.2rem;
+            color: var(--color-primary-medium);
+            margin-bottom: 0.15rem;
+        }
+
+        .stats-plaquette .stat-number {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--color-primary-dark);
+            line-height: 1.2;
+        }
+
+        .stats-plaquette .stat-label {
+            color: var(--color-text-secondary);
+            font-size: 0.7rem;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+
+        /* Badges de statut */
+        .badge-status {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-en-stock {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-livre {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-partiel {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        /* Barre de progression */
+        .progress-inventory {
+            height: 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+
+        .progress-inventory .progress-bar {
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Table styles */
+        .table-inventory td {
+            vertical-align: middle;
+        }
+
+        .table-inventory .produit-name {
+            font-weight: 600;
+            color: var(--color-primary-dark);
+        }
+
+        .table-inventory .mesure-badge {
+            background: var(--color-primary-light);
+            color: var(--color-primary-dark);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Animation pour les cartes */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .inventory-card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        /* Plaquette frais de livraison dans la modale */
+        .frais-plaquette {
+            background: #f8f9fa;
+            border: 1px dashed #dee2e6;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .frais-plaquette .frais-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .frais-plaquette .frais-row input {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .frais-plaquette .frais-row .btn-remove-frais {
+            flex-shrink: 0;
+        }
+
+        .frais-total {
+            font-weight: 700;
+            color: var(--color-primary-dark);
+            font-size: 1rem;
+        }
+
+        /* Champs de la modale en gras, bleu scintillant, grande taille, police spéciale */
+        #livraisonModal .form-control,
+        #livraisonModal .form-select {
+            font-family: 'Roboto', 'Open Sans', sans-serif;
+            font-weight: 700;
+            color: #0066cc;
+            border: 2px solid #dce7f2;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+            padding: 0.5rem 0.85rem;
+            animation: shimmer-text-modal 2.5s infinite alternate;
+        }
+
+        #livraisonModal .form-control:focus,
+        #livraisonModal .form-select:focus {
+            border-color: var(--color-primary-medium);
+            box-shadow: 0 0 0 0.2rem rgba(42, 111, 151, 0.2);
+            color: #0044aa;
+            animation: none;
+        }
+
+        @keyframes shimmer-text-modal {
+            0% { color: #0066cc; text-shadow: 0 0 5px rgba(0,102,204,0.2); }
+            50% { color: #0088ff; text-shadow: 0 0 18px rgba(0,136,255,0.5); }
+            100% { color: #0044aa; text-shadow: 0 0 8px rgba(0,68,170,0.3); }
+        }
+
+        #livraisonModal .form-label {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--color-primary-dark);
+        }
+
+        #livraisonModal #livraisonQuantite {
+            font-size: 1.3rem;
+        }
+
+        #livraisonModal .modal-title {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+        }
+
+        /* Overlay succès livraison */
+        #successLivraisonOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(13, 59, 94, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        #successLivraisonOverlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .success-livraison-box {
+            background: #fff;
+            padding: 35px 55px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+            animation: popIn 0.5s ease forwards;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.7);
+                opacity: 0;
+            }
+            70% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .success-livraison-box i {
+            font-size: 4.5rem;
+            color: #2ec4b6;
+            margin-bottom: 10px;
+        }
+
+        .success-livraison-box h4 {
+            color: var(--color-primary-dark);
+            margin-top: 10px;
+            font-weight: 700;
+            font-size: 1.4rem;
+        }
+
+        .success-livraison-box p {
+            color: var(--color-text-secondary);
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        footer {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            padding: 15px 0;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        footer a {
+            color: var(--color-text-on-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+            color: var(--color-accent);
+        }
+
+        /* Badge livraison */
+        .livraison-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+        }
+
+        /* Tooltip personnalisé */
+        .info-tooltip {
+            cursor: help;
+            color: var(--color-primary-medium);
+        }
+
+        /* Barre de recherche */
+        .search-box {
+            position: relative;
+        }
+
+        .search-box .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .search-box input {
+            padding-left: 35px;
+            border-radius: 25px;
+        }
+
+        /* Switch toggle */
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
+            cursor: pointer;
+        }
+
+        .form-switch .form-check-label {
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Bouton d'installation flottant */
+        #installBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9999;
+            background-color: var(--color-primary-dark);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(13, 59, 94, 0.4);
+            display: none;
+            align-items: center;
+            gap: 10px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #installBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 28px rgba(13, 59, 94, 0.5);
+            background-color: #0a2c44;
+            color: #fff;
+        }
+
+        #installBtn i {
+            font-size: 1.4rem;
+        }
+
+        /* Statut de connexion permanent */
+        #connectionStatus {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+            margin-left: 0.5rem;
+        }
+        #connectionStatus.online {
+            background-color: #198754;
+            color: white;
+        }
+        #connectionStatus.offline {
+            background-color: #dc3545;
+            color: white;
+        }
+        #connectionStatus i {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-tree-fill me-2"></i> AgriAchat
+                <!-- Toast permanent : statut en ligne / hors ligne -->
+                <span id="connectionStatus" class="online">
+                    <i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item" id="nav-dashboard">
+                        <a class="nav-link" href="index.html"><i class="bi bi-speedometer2 me-1"></i> Tableau de bord</a>
+                    </li>
+                    <li class="nav-item" id="nav-achats">
+                        <a class="nav-link" href="achat.html"><i class="bi bi-cart-plus me-1"></i> Achats</a>
+                    </li>
+                    <li class="nav-item" id="nav-approv">
+                        <a class="nav-link" href="approv.html"><i class="bi bi-wallet2 me-1"></i> Approvisionnement</a>
+                    </li>
+                    <li class="nav-item" id="nav-compta">
+                        <a class="nav-link" href="comptabilite.html"><i class="bi bi-calculator me-1"></i> Comptabilité</a>
+                    </li>
+                    <li class="nav-item" id="nav-inventaire">
+                        <a class="nav-link active" aria-current="page" href="point.html"><i class="bi bi-boxes me-1"></i> Inventaire</a>
+                    </li>
+                    <li class="nav-item" id="nav-parametres">
+                        <a class="nav-link" href="parametres.html"><i class="bi bi-gear me-1"></i> Paramètres</a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="user-info" id="userInfoNav">
+                            <span id="navUserName">—</span>
+                            <span class="badge-role-nav" id="navUserRole">—</span>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm" id="logoutBtn">
+                            <i class="bi bi-box-arrow-right me-1"></i> Déconnecter
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4 flex-grow-1">
+        <h2 class="section-title"><i class="bi bi-boxes me-2"></i> Inventaire des Achats</h2>
+
+        <!-- Overlay succès livraison -->
+        <div id="successLivraisonOverlay">
+            <div class="success-livraison-box">
+                <i class="bi bi-check-circle-fill"></i>
+                <h4>Livraison enregistrée !</h4>
+                <p class="text-muted">La livraison a été validée avec succès.</p>
+            </div>
+        </div>
+
+        <!-- Plaquette des statistiques -->
+        <div class="stats-plaquette">
+            <div class="row g-0 align-items-center">
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+                    <div class="stat-number" id="totalProduits">0</div>
+                    <div class="stat-label">Produits en stock</div>
+                </div>
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-diagram-3"></i></div>
+                    <div class="stat-number" id="totalMesures">0</div>
+                    <div class="stat-label">Mesures actives</div>
+                </div>
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-truck"></i></div>
+                    <div class="stat-number" id="totalLivraisons">0</div>
+                    <div class="stat-label">Livraisons</div>
+                </div>
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                    <div class="stat-number" id="totalLivre">0</div>
+                    <div class="stat-label">Livré</div>
+                </div>
+                <div class="col stat-item">
+                    <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="stat-number" id="totalEnAttente">0</div>
+                    <div class="stat-label">En attente</div>
+                </div>
+                <div class="col stat-item" style="border-right:none;">
+                    <button class="btn btn-outline-success btn-sm w-100" id="btnNewLivraison">
+                        <i class="bi bi-plus-circle me-1"></i> Nouvelle livraison
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres et recherche -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="search-box">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" class="form-control" id="searchProduit" placeholder="Rechercher un produit...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filterStatut">
+                    <option value="">Tous les statuts</option>
+                    <option value="en-stock">En stock</option>
+                    <option value="livre">Livré</option>
+                    <option value="partiel">Partiellement livré</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="filterCommanditaire">
+                    <option value="">Tous les commanditaires</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100" id="btnResetFilters">
+                    <i class="bi bi-arrow-counterclockwise"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
+
+        <!-- Tableau d'inventaire -->
+        <div class="card inventory-card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-check me-2"></i> État des stocks par produit et mesure</span>
+                <button class="btn btn-outline-light btn-sm" id="btnExportInventaire">
+                    <i class="bi bi-download me-1"></i> Exporter
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle table-inventory">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produit</th>
+                                <th>Mesure</th>
+                                <th>Qté achetée</th>
+                                <th>Qté livrée</th>
+                                <th>Reste à livrer</th>
+                                <th>Progression</th>
+                                <th>Statut</th>
+                                <th>Dernière livraison</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                            <!-- Rempli par JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mt-2" id="emptyInventoryMessage">Aucun produit en inventaire.</p>
+            </div>
+        </div>
+
+        <!-- Historique des livraisons -->
+        <div class="card inventory-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history me-2"></i> Historique des livraisons</span>
+                <span class="badge bg-light text-dark" id="nbLivraisons">0 livraisons</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Commanditaire</th>
+                                <th>Produit</th>
+                                <th>Mesure</th>
+                                <th>Qté livrée</th>
+                                <th>Livreur</th>
+                                <th>Frais</th>
+                                <th>Déduit</th>
+                                <th>Commentaire</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="livraisonsTableBody">
+                            <!-- Rempli par JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mt-2" id="emptyLivraisonsMessage">Aucune livraison enregistrée.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Nouvelle Livraison -->
+    <div class="modal fade" id="livraisonModal" tabindex="-1" aria-labelledby="livraisonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: var(--gradient-bg); color: #fff; border-radius: 20px 20px 0 0 !important; border: none;">
+                    <h5 class="modal-title" id="livraisonModalLabel">
+                        <i class="bi bi-truck me-2"></i> Nouvelle livraison
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="livraisonForm" class="row g-3">
+                        <input type="hidden" id="livraisonId" value="">
+                        <div class="col-md-6">
+                            <label for="livraisonCommanditaire" class="form-label fw-semibold">Commanditaire</label>
+                            <select class="form-select" id="livraisonCommanditaire" required>
+                                <option value="">Sélectionner</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="livraisonProduit" class="form-label fw-semibold">Produit</label>
+                            <select class="form-select" id="livraisonProduit" required>
+                                <option value="">Sélectionner</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="livraisonMesure" class="form-label fw-semibold">Mesure</label>
+                            <select class="form-select" id="livraisonMesure" required>
+                                <option value="">Sélectionner</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="livraisonQuantite" class="form-label fw-semibold">Quantité à livrer</label>
+                            <input type="number" class="form-control" id="livraisonQuantite" step="1" min="1" required>
+                            <small class="text-muted" id="disponibleInfo">Disponible : 0</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="livraisonDate" class="form-label fw-semibold">Date de livraison</label>
+                            <input type="date" class="form-control" id="livraisonDate" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="livraisonLivreur" class="form-label fw-semibold">Livreur</label>
+                            <input type="text" class="form-control" id="livraisonLivreur" placeholder="Nom du livreur">
+                            <small class="text-muted">Par défaut : acheteur connecté</small>
+                        </div>
+                        <div class="col-12">
+                            <label for="livraisonCommentaire" class="form-label fw-semibold">Commentaire</label>
+                            <textarea class="form-control" id="livraisonCommentaire" rows="2" placeholder="Détails de la livraison..."></textarea>
+                        </div>
+
+                        <!-- Plaquette Frais et Taxes de livraison -->
+                        <div class="col-12">
+                            <div class="frais-plaquette">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0"><i class="bi bi-receipt me-2"></i>Frais et taxes de livraison</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddFrais">
+                                        <i class="bi bi-plus-lg"></i> Ajouter un frais
+                                    </button>
+                                </div>
+                                <div id="fraisContainer">
+                                    <!-- Frais ajoutés dynamiquement -->
+                                </div>
+                                <div class="text-end mt-2">
+                                    <span class="frais-total">Total frais : <strong id="totalFrais">0 FCFA</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Switch déduire de l'approvisionnement -->
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="deduireApprov" checked>
+                                <label class="form-check-label" for="deduireApprov">
+                                    <i class="bi bi-wallet2 me-1"></i> Déduire les frais de l'approvisionnement
+                                </label>
+                            </div>
+                            <small class="text-muted">Si coché, le total des frais sera déduit du solde d'approvisionnement.</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #e9ecef; background: #f8fcff; border-radius: 0 0 20px 20px;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Annuler
+                    </button>
+                    <button type="button" class="btn btn-custom-primary" id="btnSaveLivraison">
+                        <i class="bi bi-check-lg me-1"></i> Enregistrer la livraison
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            Conçu par <strong>Atizoun Plateny AMOUSSOU</strong> - 
+            <a href="mailto:atizoun@gmail.com">atizoun@gmail.com</a> - 
+            <a href="tel:0197744035">01 97 74 40 35</a>
+        </div>
+    </footer>
+
+    <!-- Bouton d'installation flottant -->
+    <button id="installBtn">
+        <i class="bi bi-download"></i> Installer l'application
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Enregistrement du service worker et gestion de l'installation PWA -->
+    <script>
+        // SERVICE WORKER
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then((registration) => {
+                    console.log('Service Worker enregistré avec succès :', registration);
+                })
+                .catch((error) => {
+                    console.error('Échec de l\'enregistrement du Service Worker :', error);
+                });
+        }
+
+        // Gestion de l'installation PWA
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'flex';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                if (result.outcome === 'accepted') {
+                    console.log('Installation acceptée');
+                    installBtn.style.display = 'none';
+                } else {
+                    console.log('Installation refusée');
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+            console.log('Application installée');
+        });
+    </script>
+
+    <!-- ============================================================ -->
+    <!--  SCRIPT PRINCIPAL AVEC FIREBASE (compat)                       -->
+    <!-- ============================================================ -->
+    <script>
+        // ─── Configuration Firebase ──────────────────────────────────────
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsmRMJCtxsOkf3rCylpuTCcm4pnObvRK0",
+            authDomain: "regachat-ad0e9.firebaseapp.com",
+            databaseURL: "https://regachat-ad0e9-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "regachat-ad0e9",
+            storageBucket: "regachat-ad0e9.firebasestorage.app",
+            messagingSenderId: "809503223361",
+            appId: "1:809503223361:web:bbcf81fea1a6afdd86e0c0"
+        };
+
+        // Initialiser Firebase (compat)
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ─── Références aux nœuds ──────────────────────────────────────
+        const usersRef = database.ref('users');
+        const commanditairesRef = database.ref('commanditaires');
+        const produitsRef = database.ref('produits');
+        const mesuresRef = database.ref('mesures');
+        const achatsRef = database.ref('achats');
+        const livraisonsRef = database.ref('livraisons');
+        const balanceRef = database.ref('balance');
+        const approvisionnementsRef = database.ref('approvisionnements');
+
+        // ─── États locaux ──────────────────────────────────────────────
+        let users = [];
+        let commanditaires = [];
+        let produits = [];
+        let mesures = [];
+        let achats = [];
+        let livraisons = [];
+        let approvisionnements = [];
+        let balance = 0;
+        let currentUser = null;
+
+        // ─── DOM Elements ──────────────────────────────────────────────
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusText = document.getElementById('statusText');
+
+        // ─── Gestion du statut de connexion ────────────────────────────
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            const isConnected = snap.val() === true;
+            if (isConnected) {
+                connectionStatus.className = 'online';
+                statusText.textContent = 'En ligne';
+                connectionStatus.innerHTML = '<i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>';
+            } else {
+                connectionStatus.className = 'offline';
+                statusText.textContent = 'Hors ligne';
+                connectionStatus.innerHTML = '<i class="bi bi-wifi-off"></i> <span id="statusText">Hors ligne</span>';
+            }
+        });
+
+        window.addEventListener('online', () => {});
+        window.addEventListener('offline', () => {});
+
+        // ─── Fonctions d'initialisation des données par défaut ─────────
+        async function initDefaultData() {
+            const snapCommanditaires = await commanditairesRef.once('value');
+            if (!snapCommanditaires.exists()) {
+                const defaultCmd = [
+                    { id: '1', nom: 'Coopérative Bénin', contact: 'coop@benin.agri' },
+                    { id: '2', nom: 'Export SA', contact: '+229 97 74 40 35' }
+                ];
+                for (const cmd of defaultCmd) {
+                    await commanditairesRef.child(cmd.id).set({
+                        nom: cmd.nom,
+                        contact: cmd.contact
+                    });
+                }
+            }
+
+            const snapProduits = await produitsRef.once('value');
+            if (!snapProduits.exists()) {
+                const defaultProd = [
+                    { id: '1', nom: 'Maïs' },
+                    { id: '2', nom: 'Cacao' }
+                ];
+                for (const p of defaultProd) {
+                    await produitsRef.child(p.id).set({ nom: p.nom });
+                }
+            }
+
+            const snapMesures = await mesuresRef.once('value');
+            if (!snapMesures.exists()) {
+                const defaultMes = [
+                    { id: '1', nom: 'Kilogramme', abrev: 'kg' },
+                    { id: '2', nom: 'Sachet', abrev: 'sac' }
+                ];
+                for (const m of defaultMes) {
+                    await mesuresRef.child(m.id).set({
+                        nom: m.nom,
+                        abrev: m.abrev
+                    });
+                }
+            }
+
+            const snapUsers = await usersRef.once('value');
+            if (!snapUsers.exists()) {
+                const defaultUsers = [
+                    { id: '1', name: 'Directeur Général (Admin)', role: 'admin', password: '1234', email: 'admin@agriachat.com' },
+                    { id: '2', name: 'Acheteur Central', role: 'acheteur', password: '5678', email: 'acheteur@agriachat.com' }
+                ];
+                for (const u of defaultUsers) {
+                    await usersRef.child(u.id).set({
+                        name: u.name,
+                        role: u.role,
+                        password: u.password,
+                        email: u.email
+                    });
+                }
+            }
+
+            const snapBalance = await balanceRef.once('value');
+            if (!snapBalance.exists()) {
+                await balanceRef.set(0);
+            }
+        }
+
+        // ─── Listeners pour synchronisation en temps réel ──────────────
+        function initListeners() {
+            usersRef.on('value', (snap) => {
+                const data = snap.val();
+                users = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                checkSession();
+            });
+
+            commanditairesRef.on('value', (snap) => {
+                const data = snap.val();
+                commanditaires = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                populateSelects();
+                renderInventory();
+            });
+
+            produitsRef.on('value', (snap) => {
+                const data = snap.val();
+                produits = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                populateSelects();
+                renderInventory();
+            });
+
+            mesuresRef.on('value', (snap) => {
+                const data = snap.val();
+                mesures = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                populateSelects();
+                renderInventory();
+            });
+
+            achatsRef.on('value', (snap) => {
+                const data = snap.val();
+                achats = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                renderInventory();
+            });
+
+            livraisonsRef.on('value', (snap) => {
+                const data = snap.val();
+                livraisons = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+                renderInventory();
+            });
+
+            balanceRef.on('value', (snap) => {
+                balance = snap.val() || 0;
+            });
+
+            approvisionnementsRef.on('value', (snap) => {
+                const data = snap.val();
+                approvisionnements = data ? Object.entries(data).map(([id, values]) => ({ id, ...values })) : [];
+            });
+        }
+
+        // ─── Gestion de la session ──────────────────────────────────────
+        function checkSession() {
+            const currentUserId = localStorage.getItem('agri_current_user_id');
+            if (currentUserId) {
+                currentUser = users.find(u => u.id === currentUserId);
+                if (currentUser) {
+                    document.getElementById('navUserName').textContent = currentUser.name || 'Utilisateur';
+                    document.getElementById('navUserRole').textContent = currentUser.role ? currentUser.role.toUpperCase() : '';
+                    const role = currentUser.role;
+                    const navApprov = document.getElementById('nav-approv');
+                    const navCompta = document.getElementById('nav-compta');
+                    const navInventaire = document.getElementById('nav-inventaire');
+                    const navParametres = document.getElementById('nav-parametres');
+                    if (role !== 'admin') {
+                        if (navApprov) navApprov.style.display = 'none';
+                        if (navCompta) navCompta.style.display = 'none';
+                        if (navInventaire) navInventaire.style.display = 'none';
+                        if (navParametres) navParametres.style.display = 'none';
+                    } else {
+                        if (navApprov) navApprov.style.display = '';
+                        if (navCompta) navCompta.style.display = '';
+                        if (navInventaire) navInventaire.style.display = '';
+                        if (navParametres) navParametres.style.display = '';
+                    }
+                    return;
+                }
+            }
+            window.location.href = 'login.html';
+        }
+
+        // ─── Fonctions de rendu ──────────────────────────────────────────
+        function getInventoryData() {
+            const inventory = {};
+            achats.forEach(achat => {
+                const key = `${achat.produitId}_${achat.mesureId}_${achat.commanditaireId}`;
+                if (!inventory[key]) {
+                    inventory[key] = {
+                        produitId: achat.produitId,
+                        mesureId: achat.mesureId,
+                        commanditaireId: achat.commanditaireId,
+                        quantiteAchetee: 0,
+                        quantiteLivree: 0,
+                        livraisons: []
+                    };
+                }
+                inventory[key].quantiteAchetee += achat.quantite;
+            });
+
+            livraisons.forEach(liv => {
+                const key = `${liv.produitId}_${liv.mesureId}_${liv.commanditaireId}`;
+                if (inventory[key]) {
+                    inventory[key].quantiteLivree += liv.quantite;
+                    inventory[key].livraisons.push(liv);
+                }
+            });
+
+            Object.values(inventory).forEach(item => {
+                item.livraisons.sort((a, b) => new Date(b.date) - new Date(a.date));
+            });
+
+            return Object.values(inventory);
+        }
+
+        function getStatutItem(item) {
+            if (item.quantiteLivree >= item.quantiteAchetee && item.quantiteAchetee > 0) return 'livre';
+            else if (item.quantiteLivree > 0) return 'partiel';
+            return 'en-stock';
+        }
+
+        function getStatutLabel(statut) {
+            switch(statut) {
+                case 'livre': return 'Livré';
+                case 'partiel': return 'Partiellement livré';
+                case 'en-stock': return 'En stock';
+                default: return 'Inconnu';
+            }
+        }
+
+        function getStatutClass(statut) {
+            switch(statut) {
+                case 'livre': return 'status-livre';
+                case 'partiel': return 'status-partiel';
+                case 'en-stock': return 'status-en-stock';
+                default: return '';
+            }
+        }
+
+        function getPourcentageProgression(item) {
+            if (item.quantiteAchetee === 0) return 0;
+            return Math.round((item.quantiteLivree / item.quantiteAchetee) * 100);
+        }
+
+        // ─── Fonctions UI ──────────────────────────────────────────────
+        function populateSelects() {
+            const filterCmd = document.getElementById('filterCommanditaire');
+            filterCmd.innerHTML = '<option value="">Tous les commanditaires</option>';
+            commanditaires.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nom;
+                filterCmd.appendChild(opt);
+            });
+
+            const livCmd = document.getElementById('livraisonCommanditaire');
+            livCmd.innerHTML = '<option value="">Sélectionner</option>';
+            commanditaires.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nom;
+                livCmd.appendChild(opt);
+            });
+        }
+
+        function updateProduitsByCommanditaire() {
+            const cmdId = document.getElementById('livraisonCommanditaire').value;
+            const prodSelect = document.getElementById('livraisonProduit');
+            let produitsDisponibles = [];
+            if (cmdId) {
+                const produitsIds = new Set();
+                achats.forEach(achat => {
+                    if (achat.commanditaireId === cmdId) {
+                        produitsIds.add(achat.produitId);
+                    }
+                });
+                produitsDisponibles = produits.filter(p => produitsIds.has(p.id));
+            } else {
+                produitsDisponibles = [...produits];
+            }
+
+            const previousValue = prodSelect.value;
+            prodSelect.innerHTML = '<option value="">Sélectionner</option>';
+            produitsDisponibles.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.nom;
+                prodSelect.appendChild(opt);
+            });
+            if (previousValue && produitsDisponibles.some(p => p.id === previousValue)) {
+                prodSelect.value = previousValue;
+            } else {
+                prodSelect.value = '';
+            }
+            updateMesuresByCommanditaireAndProduit();
+        }
+
+        function updateMesuresByCommanditaireAndProduit() {
+            const cmdId = document.getElementById('livraisonCommanditaire').value;
+            const prodId = document.getElementById('livraisonProduit').value;
+            const mesSelect = document.getElementById('livraisonMesure');
+            let mesuresDisponibles = [];
+            if (cmdId && prodId) {
+                const mesuresIds = new Set();
+                achats.forEach(achat => {
+                    if (achat.commanditaireId === cmdId && achat.produitId === prodId) {
+                        mesuresIds.add(achat.mesureId);
+                    }
+                });
+                mesuresDisponibles = mesures.filter(m => mesuresIds.has(m.id));
+            } else if (cmdId) {
+                const mesuresIds = new Set();
+                achats.forEach(achat => {
+                    if (achat.commanditaireId === cmdId) {
+                        mesuresIds.add(achat.mesureId);
+                    }
+                });
+                mesuresDisponibles = mesures.filter(m => mesuresIds.has(m.id));
+            } else {
+                mesuresDisponibles = [...mesures];
+            }
+
+            const previousValue = mesSelect.value;
+            mesSelect.innerHTML = '<option value="">Sélectionner</option>';
+            mesuresDisponibles.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.nom + (m.abrev ? ' (' + m.abrev + ')' : '');
+                mesSelect.appendChild(opt);
+            });
+            if (previousValue && mesuresDisponibles.some(m => m.id === previousValue)) {
+                mesSelect.value = previousValue;
+            } else {
+                mesSelect.value = '';
+            }
+            updateDisponibleInfo();
+        }
+
+        function updateDisponibleInfo() {
+            const cmdId = document.getElementById('livraisonCommanditaire').value;
+            const prodId = document.getElementById('livraisonProduit').value;
+            const mesId = document.getElementById('livraisonMesure').value;
+            const info = document.getElementById('disponibleInfo');
+            const qteInput = document.getElementById('livraisonQuantite');
+
+            if (cmdId && prodId && mesId) {
+                const inventory = getInventoryData();
+                const item = inventory.find(i => 
+                    i.produitId === prodId && 
+                    i.mesureId === mesId && 
+                    i.commanditaireId === cmdId
+                );
+                if (item) {
+                    const reste = item.quantiteAchetee - item.quantiteLivree;
+                    info.textContent = `Disponible à livrer : ${reste} (Acheté : ${item.quantiteAchetee}, Livré : ${item.quantiteLivree})`;
+                    qteInput.max = reste;
+                } else {
+                    info.textContent = 'Aucun achat trouvé pour cette combinaison';
+                    qteInput.max = 0;
+                }
+            } else {
+                info.textContent = 'Disponible : 0';
+            }
+        }
+
+        function showSuccessLivraisonMessage() {
+            const overlay = document.getElementById('successLivraisonOverlay');
+            overlay.classList.add('active');
+            setTimeout(() => {
+                overlay.classList.remove('active');
+            }, 2000);
+        }
+
+        // ─── Calcul des soldes ──────────────────────────────────────────
+        function getSoldeCommanditaire(cmdId) {
+            const totalApprov = approvisionnements
+                .filter(a => a.commanditaireId === cmdId)
+                .reduce((sum, a) => sum + (a.montant || 0), 0);
+
+            const totalAchats = achats
+                .filter(a => a.commanditaireId === cmdId)
+                .reduce((sum, a) => sum + (a.total || 0), 0);
+
+            const totalCommissions = achats
+                .filter(a => a.commanditaireId === cmdId)
+                .reduce((sum, a) => sum + ((a.quantite || 0) * (a.commission || 0)), 0);
+
+            let totalFrais = 0;
+            livraisons
+                .filter(l => l.commanditaireId === cmdId && l.deduireApprov && l.frais)
+                .forEach(l => {
+                    const frais = l.frais.reduce((s, f) => s + (f.montant || 0), 0);
+                    totalFrais += frais;
+                });
+
+            return totalApprov - totalAchats - totalCommissions - totalFrais;
+        }
+
+        // ─── Gestion des frais ──────────────────────────────────────────
+        let fraisCounter = 0;
+
+        function addFraisRow(libelle = '', montant = '') {
+            fraisCounter++;
+            const container = document.getElementById('fraisContainer');
+            const row = document.createElement('div');
+            row.className = 'frais-row';
+            row.dataset.fraisId = fraisCounter;
+            row.innerHTML = `
+                <input type="text" class="form-control form-control-sm frais-libelle" placeholder="Libellé (ex: Transport)" value="${libelle}" style="flex:2;">
+                <input type="number" class="form-control form-control-sm frais-montant" placeholder="Montant (FCFA)" value="${montant}" min="0" step="1" style="flex:1;">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-frais" title="Supprimer ce frais">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            container.appendChild(row);
+
+            row.querySelector('.frais-montant').addEventListener('input', updateTotalFrais);
+            row.querySelector('.btn-remove-frais').addEventListener('click', function() {
+                row.remove();
+                updateTotalFrais();
+            });
+
+            updateTotalFrais();
+        }
+
+        function updateTotalFrais() {
+            let total = 0;
+            document.querySelectorAll('.frais-montant').forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+            document.getElementById('totalFrais').textContent = total.toLocaleString() + ' FCFA';
+        }
+
+        function getFraisData() {
+            const frais = [];
+            document.querySelectorAll('#fraisContainer .frais-row').forEach(row => {
+                const libelle = row.querySelector('.frais-libelle').value.trim();
+                const montant = parseFloat(row.querySelector('.frais-montant').value) || 0;
+                if (libelle || montant > 0) {
+                    frais.push({ libelle, montant });
+                }
+            });
+            return frais;
+        }
+
+        function clearFrais() {
+            document.getElementById('fraisContainer').innerHTML = '';
+            fraisCounter = 0;
+            updateTotalFrais();
+        }
+
+        // ─── Ouverture de la modale ─────────────────────────────────────
+        function openNewLivraison(produitId = '', mesureId = '', commanditaireId = '') {
+            document.getElementById('livraisonId').value = '';
+            document.getElementById('livraisonCommanditaire').value = commanditaireId;
+            updateProduitsByCommanditaire();
+            document.getElementById('livraisonProduit').value = produitId;
+            updateMesuresByCommanditaireAndProduit();
+            document.getElementById('livraisonMesure').value = mesureId;
+            document.getElementById('livraisonQuantite').value = '';
+            document.getElementById('livraisonDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('livraisonLivreur').value = currentUser ? currentUser.name || 'Acheteur' : 'Acheteur';
+            document.getElementById('livraisonCommentaire').value = '';
+            document.getElementById('deduireApprov').checked = true;
+            clearFrais();
+            addFraisRow();
+            updateDisponibleInfo();
+            const modal = new bootstrap.Modal(document.getElementById('livraisonModal'));
+            modal.show();
+        }
+
+        // ─── Sauvegarde d'une livraison ────────────────────────────────
+        async function saveLivraison() {
+            const cmdId = document.getElementById('livraisonCommanditaire').value;
+            const prodId = document.getElementById('livraisonProduit').value;
+            const mesId = document.getElementById('livraisonMesure').value;
+            const quantite = parseFloat(document.getElementById('livraisonQuantite').value);
+            const date = document.getElementById('livraisonDate').value;
+            const livreur = document.getElementById('livraisonLivreur').value.trim() || (currentUser ? currentUser.name || 'Acheteur' : 'Acheteur');
+            const commentaire = document.getElementById('livraisonCommentaire').value.trim();
+            const frais = getFraisData();
+            const doitDeduire = document.getElementById('deduireApprov').checked;
+
+            if (!cmdId || !prodId || !mesId) {
+                alert('Veuillez remplir tous les champs obligatoires.');
+                return;
+            }
+
+            if (!quantite || quantite <= 0) {
+                alert('Veuillez saisir une quantité valide.');
+                return;
+            }
+
+            if (!date) {
+                alert('Veuillez saisir une date.');
+                return;
+            }
+
+            // Vérifier la disponibilité avant la sauvegarde
+            const inventoryBefore = getInventoryData();
+            const itemBefore = inventoryBefore.find(i => 
+                i.produitId === prodId && 
+                i.mesureId === mesId && 
+                i.commanditaireId === cmdId
+            );
+
+            if (!itemBefore) {
+                alert('Aucun achat trouvé pour cette combinaison.');
+                return;
+            }
+
+            const disponible = itemBefore.quantiteAchetee - itemBefore.quantiteLivree;
+            if (quantite > disponible) {
+                alert(`Quantité insuffisante. Disponible : ${disponible}`);
+                return;
+            }
+
+            const totalFrais = frais.reduce((sum, f) => sum + f.montant, 0);
+
+            // Déduire les frais si coché
+            if (doitDeduire && totalFrais > 0) {
+                try {
+                    await balanceRef.transaction((currentBalance) => {
+                        const newBalance = (currentBalance || 0) - totalFrais;
+                        if (newBalance < 0) {
+                            throw new Error('Solde insuffisant');
+                        }
+                        return newBalance;
+                    });
+                } catch (error) {
+                    alert('Solde d\'approvisionnement insuffisant pour couvrir les frais.');
+                    return;
+                }
+            }
+
+            const id = document.getElementById('livraisonId').value;
+            const livraisonData = {
+                commanditaireId: cmdId,
+                produitId: prodId,
+                mesureId: mesId,
+                quantite,
+                date,
+                livreur,
+                commentaire,
+                frais,
+                deduireApprov: doitDeduire
+            };
+
+            try {
+                if (id) {
+                    await livraisonsRef.child(id).update(livraisonData);
+                } else {
+                    const newRef = livraisonsRef.push();
+                    await newRef.set(livraisonData);
+                }
+                const modal = bootstrap.Modal.getInstance(document.getElementById('livraisonModal'));
+                modal.hide();
+                showSuccessLivraisonMessage();
+
+                // ─── Récupérer les données mises à jour pour le message ──
+                // On attend que les listeners aient mis à jour les tableaux
+                // Pour être sûr, on force une lecture locale des données mises à jour
+                // (les listeners sont déjà en cours, mais on va utiliser les données fraîches)
+                // On peut recalculer l'inventaire avec les nouvelles livraisons
+                // Mais attention, les données ne sont pas encore synchronisées si on utilise les variables
+                // On va récupérer directement depuis le snapshot ?
+                // On peut utiliser les variables mises à jour par les listeners, mais c'est asynchrone.
+                // Pour éviter les délais, on recrée l'inventaire avec les données actuelles (déjà mises à jour car les listeners sont en temps réel)
+                // Cependant, il se peut que les listeners n'aient pas encore terminé.
+                // On va utiliser un petit délai ou mieux, utiliser les données immédiates.
+                // On peut forcer une mise à jour en lisant depuis le snapshot.
+                // Mais pour la rapidité, on va utiliser les variables qui seront mises à jour par les listeners,
+                // mais on peut aussi recalculer avec les données locales que nous avons déjà.
+
+                // Solution : on attend un peu pour que les données soient actualisées
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // Maintenant on recalcule l'inventaire avec les données mises à jour
+                const inventoryAfter = getInventoryData();
+                const itemAfter = inventoryAfter.find(i => 
+                    i.produitId === prodId && 
+                    i.mesureId === mesId && 
+                    i.commanditaireId === cmdId
+                );
+
+                // Si itemAfter est undefined, on utilise itemBefore comme fallback
+                const finalItem = itemAfter || itemBefore;
+                const finalQuantiteAchetee = finalItem ? finalItem.quantiteAchetee : 0;
+                const finalQuantiteLivree = finalItem ? finalItem.quantiteLivree : 0;
+                const finalReste = finalQuantiteAchetee - finalQuantiteLivree;
+                const finalProgression = getPourcentageProgression(finalItem);
+                const finalStatut = finalItem ? getStatutItem(finalItem) : 'en-stock';
+                const finalDerniereLivraison = (finalItem && finalItem.livraisons.length > 0) ? finalItem.livraisons[0].date : 'Aucune';
+
+                // Récupérer les détails pour le message
+                const cmd = commanditaires.find(c => c.id === cmdId);
+                const produit = produits.find(p => p.id === prodId);
+                const mesure = mesures.find(m => m.id === mesId);
+                const soldeCmd = getSoldeCommanditaire(cmdId);
+                const soldeGeneral = balance;
+
+                // Récupérer le numéro WhatsApp
+                let numeroWhatsApp = cmd && cmd.contact ? cmd.contact : '';
+                numeroWhatsApp = numeroWhatsApp.replace(/\s/g, '').replace(/[\(\)\-]/g, '');
+                if (numeroWhatsApp.startsWith('0')) {
+                    numeroWhatsApp = '+229' + numeroWhatsApp.substring(1);
+                } else if (!numeroWhatsApp.startsWith('+')) {
+                    numeroWhatsApp = '+229' + numeroWhatsApp;
+                }
+
+                if (!numeroWhatsApp || numeroWhatsApp.length < 8) {
+                    alert('Numéro WhatsApp non disponible pour ce commanditaire.');
+                    return;
+                }
+
+                // Construire le message WhatsApp avec les bonnes valeurs
+                const message =
+`📦 *NOUVELLE LIVRAISON ENREGISTRÉE* 📦
+
+🔹 *Produit* : ${produit ? produit.nom : 'Inconnu'}
+🔹 *Mesure* : ${mesure ? mesure.nom : 'Inconnu'}
+🔹 *Quantité livrée* : ${quantite}
+🔹 *Quantité achetée* : ${finalQuantiteAchetee}
+🔹 *Quantité restante* : ${finalReste}
+🔹 *Progression* : ${finalProgression}%
+🔹 *Statut* : ${getStatutLabel(finalStatut)}
+🔹 *Dernière livraison* : ${finalDerniereLivraison}
+
+💰 *Solde du compte (${cmd ? cmd.nom : 'Inconnu'})* : ${soldeCmd.toFixed(0)} FCFA
+💰 *Solde général* : ${soldeGeneral.toFixed(0)} FCFA
+
+✅ *Livraison effectuée par* : ${livreur}
+📝 *Commentaire* : ${commentaire || 'Aucun'}
+
+📅 *Date* : ${date}
+
+Merci pour votre confiance 🙏
+AgriAchat – Gestion des achats agricoles`;
+
+                const messageEncoded = encodeURIComponent(message);
+                const whatsappLink = `https://wa.me/${numeroWhatsApp}?text=${messageEncoded}`;
+
+                // Ouvrir directement WhatsApp
+                window.open(whatsappLink, '_blank');
+
+            } catch (error) {
+                alert('Erreur lors de l\'enregistrement : ' + error.message);
+            }
+        }
+
+        // ─── Rendu principal ───────────────────────────────────────────
+        function renderInventory() {
+            const inventory = getInventoryData();
+            const searchTerm = document.getElementById('searchProduit').value.toLowerCase();
+            const statutFilter = document.getElementById('filterStatut').value;
+            const cmdFilter = document.getElementById('filterCommanditaire').value;
+
+            let filtered = inventory.filter(item => {
+                const prod = produits.find(p => p.id === item.produitId);
+                const prodNom = prod ? prod.nom.toLowerCase() : '';
+                
+                let matchSearch = true;
+                if (searchTerm) {
+                    matchSearch = prodNom.includes(searchTerm);
+                }
+
+                let matchStatut = true;
+                if (statutFilter) {
+                    matchStatut = getStatutItem(item) === statutFilter;
+                }
+
+                let matchCmd = true;
+                if (cmdFilter) {
+                    matchCmd = item.commanditaireId === cmdFilter;
+                }
+
+                return matchSearch && matchStatut && matchCmd;
+            });
+
+            const tbody = document.getElementById('inventoryTableBody');
+            const emptyMsg = document.getElementById('emptyInventoryMessage');
+            tbody.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                
+                filtered.forEach(item => {
+                    const prod = produits.find(p => p.id === item.produitId);
+                    const prodNom = prod ? prod.nom : 'Inconnu';
+                    const mes = mesures.find(m => m.id === item.mesureId);
+                    const mesNom = mes ? mes.nom : 'Inconnu';
+                    const mesAbrev = mes ? mes.abrev || '' : '';
+                    const cmd = commanditaires.find(c => c.id === item.commanditaireId);
+                    const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                    
+                    const statut = getStatutItem(item);
+                    const progression = getPourcentageProgression(item);
+                    const resteALivrer = item.quantiteAchetee - item.quantiteLivree;
+                    
+                    let derniereLivraison = '—';
+                    if (item.livraisons.length > 0) {
+                        derniereLivraison = item.livraisons[0].date;
+                    }
+
+                    let progressBarClass = 'bg-warning';
+                    if (progression >= 100) progressBarClass = 'bg-success';
+                    else if (progression >= 50) progressBarClass = 'bg-info';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <span class="produit-name">${prodNom}</span>
+                            <br><small class="text-muted">${cmdNom}</small>
+                        </td>
+                        <td><span class="mesure-badge">${mesNom}${mesAbrev ? ' (' + mesAbrev + ')' : ''}</span></td>
+                        <td><strong>${item.quantiteAchetee}</strong></td>
+                        <td><strong>${item.quantiteLivree}</strong></td>
+                        <td>
+                            <strong class="${resteALivrer > 0 ? 'text-danger' : 'text-success'}">
+                                ${resteALivrer}
+                            </strong>
+                        </td>
+                        <td style="min-width: 120px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress progress-inventory flex-grow-1">
+                                    <div class="progress-bar ${progressBarClass}" 
+                                         style="width: ${progression}%" 
+                                         role="progressbar" 
+                                         aria-valuenow="${progression}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <small class="text-muted">${progression}%</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge-status ${getStatutClass(statut)}">
+                                ${getStatutLabel(statut)}
+                            </span>
+                        </td>
+                        <td><small>${derniereLivraison}</small></td>
+                        <td class="text-end">
+                            ${currentUser && currentUser.role === 'admin' ? `
+                            <button class="btn btn-sm btn-outline-success livrer-btn" 
+                                    data-produit="${item.produitId}" 
+                                    data-mesure="${item.mesureId}" 
+                                    data-cmd="${item.commanditaireId}"
+                                    title="Ajouter une livraison">
+                                <i class="bi bi-truck"></i>
+                            </button>
+                            ` : ''}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (currentUser && currentUser.role === 'admin') {
+                    document.querySelectorAll('.livrer-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const prodId = this.dataset.produit;
+                            const mesId = this.dataset.mesure;
+                            const cmdId = this.dataset.cmd;
+                            openNewLivraison(prodId, mesId, cmdId);
+                        });
+                    });
+                }
+            }
+
+            renderLivraisons();
+            updateStats();
+        }
+
+        function renderLivraisons() {
+            const tbody = document.getElementById('livraisonsTableBody');
+            const emptyMsg = document.getElementById('emptyLivraisonsMessage');
+            tbody.innerHTML = '';
+            
+            if (livraisons.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                
+                const sortedLivraisons = [...livraisons].sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                sortedLivraisons.forEach(liv => {
+                    const cmd = commanditaires.find(c => c.id === liv.commanditaireId);
+                    const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                    const prod = produits.find(p => p.id === liv.produitId);
+                    const prodNom = prod ? prod.nom : 'Inconnu';
+                    const mes = mesures.find(m => m.id === liv.mesureId);
+                    const mesNom = mes ? mes.nom : 'Inconnu';
+                    
+                    const totalFrais = liv.frais ? liv.frais.reduce((s, f) => s + f.montant, 0) : 0;
+                    const fraisDisplay = totalFrais > 0 ? totalFrais.toLocaleString() + ' FCFA' : '—';
+                    const deduitDisplay = liv.deduireApprov ? '<span class="badge bg-warning text-dark">Oui</span>' : '<span class="badge bg-secondary">Non</span>';
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${liv.date}</td>
+                        <td>${cmdNom}</td>
+                        <td>${prodNom}</td>
+                        <td>${mesNom}</td>
+                        <td><strong>${liv.quantite}</strong></td>
+                        <td>${liv.livreur || '—'}</td>
+                        <td>${fraisDisplay}</td>
+                        <td>${deduitDisplay}</td>
+                        <td>${liv.commentaire || '—'}</td>
+                        <td class="text-end">
+                            ${currentUser && currentUser.role === 'admin' ? `
+                            <button class="btn btn-sm btn-outline-danger delete-livraison-btn" data-id="${liv.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            ` : ''}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (currentUser && currentUser.role === 'admin') {
+                    document.querySelectorAll('.delete-livraison-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const id = this.dataset.id;
+                            if (confirm('Supprimer cette livraison ? Les frais déduits seront remboursés.')) {
+                                const livraison = livraisons.find(l => l.id === id);
+                                if (livraison && livraison.deduireApprov && livraison.frais) {
+                                    const totalFrais = livraison.frais.reduce((s, f) => s + f.montant, 0);
+                                    if (totalFrais > 0) {
+                                        balanceRef.transaction((currentBalance) => {
+                                            return (currentBalance || 0) + totalFrais;
+                                        });
+                                    }
+                                }
+                                livraisonsRef.child(id).remove()
+                                    .catch(err => alert('Erreur lors de la suppression: ' + err.message));
+                            }
+                        });
+                    });
+                }
+            }
+
+            document.getElementById('nbLivraisons').textContent = livraisons.length + ' livraisons';
+        }
+
+        function updateStats() {
+            const inventory = getInventoryData();
+            document.getElementById('totalProduits').textContent = inventory.length;
+            const mesuresUniques = new Set(inventory.map(i => i.mesureId));
+            document.getElementById('totalMesures').textContent = mesuresUniques.size;
+            document.getElementById('totalLivraisons').textContent = livraisons.length;
+            const totalLivre = inventory.filter(i => getStatutItem(i) === 'livre').length;
+            document.getElementById('totalLivre').textContent = totalLivre;
+            const totalEnAttente = inventory.filter(i => getStatutItem(i) !== 'livre').length;
+            document.getElementById('totalEnAttente').textContent = totalEnAttente;
+        }
+
+        // ─── Initialisation ─────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initDefaultData();
+            initListeners();
+
+            // Événements DOM
+            document.getElementById('searchProduit').addEventListener('input', renderInventory);
+            document.getElementById('filterStatut').addEventListener('change', renderInventory);
+            document.getElementById('filterCommanditaire').addEventListener('change', renderInventory);
+
+            document.getElementById('btnResetFilters').addEventListener('click', function() {
+                document.getElementById('searchProduit').value = '';
+                document.getElementById('filterStatut').value = '';
+                document.getElementById('filterCommanditaire').value = '';
+                renderInventory();
+            });
+
+            document.getElementById('btnNewLivraison').addEventListener('click', function() {
+                openNewLivraison();
+            });
+
+            document.getElementById('btnSaveLivraison').addEventListener('click', saveLivraison);
+
+            document.getElementById('btnAddFrais').addEventListener('click', function() {
+                addFraisRow();
+            });
+
+            document.getElementById('livraisonCommanditaire').addEventListener('change', function() {
+                updateProduitsByCommanditaire();
+            });
+
+            document.getElementById('livraisonProduit').addEventListener('change', function() {
+                updateMesuresByCommanditaireAndProduit();
+            });
+
+            document.getElementById('livraisonMesure').addEventListener('change', updateDisponibleInfo);
+
+            document.getElementById('btnExportInventaire').addEventListener('click', function() {
+                const inventory = getInventoryData();
+                if (inventory.length === 0) {
+                    alert('Aucune donnée à exporter.');
+                    return;
+                }
+
+                let csv = 'Produit,Mesure,Commanditaire,Qté achetée,Qté livrée,Reste à livrer,Progression,Statut\n';
+                inventory.forEach(item => {
+                    const prod = produits.find(p => p.id === item.produitId);
+                    const prodNom = prod ? prod.nom : 'Inconnu';
+                    const mes = mesures.find(m => m.id === item.mesureId);
+                    const mesNom = mes ? mes.nom : 'Inconnu';
+                    const cmd = commanditaires.find(c => c.id === item.commanditaireId);
+                    const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                    const progression = getPourcentageProgression(item);
+                    const statut = getStatutLabel(getStatutItem(item));
+                    
+                    csv += `"${prodNom}","${mesNom}","${cmdNom}",${item.quantiteAchetee},${item.quantiteLivree},${item.quantiteAchetee - item.quantiteLivree},${progression}%,"${statut}"\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'inventaire.csv';
+                link.click();
+                URL.revokeObjectURL(link.href);
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                localStorage.removeItem('agri_current_user_id');
+                window.location.href = 'login.html';
+            });
+
+            document.getElementById('livraisonDate').value = new Date().toISOString().split('T')[0];
+
+            console.log('Application Firebase prête (Inventaire).');
+        });
+    </script>
+
+</body>
+</html>

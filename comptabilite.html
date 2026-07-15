@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comptabilité - Gestion des Achats Agricoles</title>
+    <!-- Lien vers le manifest pour PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Firebase SDK (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --color-primary-dark: #0d3b5e;
+            --color-primary-medium: #2a6f97;
+            --color-primary-light: #c9e4f0;
+            --color-accent: #f9a826;
+            --color-alert-bright: #E01A1A;
+            --color-background-base: #FFFFFF;
+            --color-text-primary: #1A1A1A;
+            --color-text-secondary: #555;
+            --color-text-on-primary: #FFFFFF;
+            --gradient-bg: linear-gradient(135deg, #0d3b5e 0%, #2a6f97 100%);
+            --gradient-card: linear-gradient(145deg, #ffffff, #f2f6fa);
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-info: #17a2b8;
+            --color-danger: #dc3545;
+        }
+
+        body {
+            font-family: 'Roboto', 'Open Sans', sans-serif;
+            background: #e8f0f7;
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-custom {
+            background: var(--gradient-bg) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: var(--color-text-on-primary) !important;
+            font-weight: 500;
+        }
+
+        .navbar-custom .nav-link.active {
+            font-weight: 700;
+            border-bottom: 3px solid var(--color-accent);
+        }
+
+        .navbar-custom .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+        }
+
+        .navbar-custom .nav-link.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .user-info {
+            color: var(--color-text-on-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .user-info .badge-role-nav {
+            background-color: rgba(255,255,255,0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .btn-custom-primary {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(42, 111, 151, 0.3);
+        }
+
+        .btn-custom-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(42, 111, 151, 0.4);
+            background: var(--color-primary-dark);
+            color: #fff;
+        }
+
+        .section-title {
+            color: var(--color-primary-dark);
+            font-weight: 700;
+            border-bottom: 3px solid var(--color-accent);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            background: var(--gradient-card);
+            box-shadow: 0 8px 24px rgba(13, 59, 94, 0.10);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(13, 59, 94, 0.15);
+        }
+
+        .card-header {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            font-weight: 600;
+            border-bottom: none;
+            border-radius: 16px 16px 0 0 !important;
+            padding: 0.75rem 1.25rem;
+        }
+
+        /* Plaquette KPI compacte */
+        .kpi-plaquette {
+            background: var(--gradient-card);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(13, 59, 94, 0.10);
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .kpi-plaquette .kpi-item {
+            text-align: center;
+            padding: 0.3rem 0.4rem;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .kpi-plaquette .kpi-item:last-child {
+            border-right: none;
+        }
+
+        .kpi-plaquette .kpi-icon {
+            font-size: 1rem;
+            margin-bottom: 0.1rem;
+        }
+
+        .kpi-plaquette .kpi-value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .kpi-plaquette .kpi-label {
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            line-height: 1.2;
+        }
+
+        .kpi-plaquette .kpi-approv .kpi-value { color: var(--color-success); }
+        .kpi-plaquette .kpi-depenses .kpi-value { color: var(--color-danger); }
+        .kpi-plaquette .kpi-commissions .kpi-value { color: #856404; }
+        .kpi-plaquette .kpi-frais .kpi-value { color: #383d94; }
+        .kpi-plaquette .kpi-solde .kpi-value { color: #0dcaf0; }
+
+        /* Table styles */
+        .table-compta td {
+            vertical-align: middle;
+        }
+
+        .table-compta .mouvement-credit {
+            color: var(--color-success);
+            font-weight: 600;
+        }
+
+        .table-compta .mouvement-debit {
+            color: var(--color-danger);
+            font-weight: 600;
+        }
+
+        .badge-mouvement {
+            padding: 0.3rem 0.7rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-approvisionnement {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-achat {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-commission {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-frais {
+            background: #e2e3f1;
+            color: #383d94;
+        }
+
+        /* Barre de recherche */
+        .search-box {
+            position: relative;
+        }
+
+        .search-box .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .search-box input {
+            padding-left: 35px;
+            border-radius: 25px;
+        }
+
+        /* Toggle bouton afficher/masquer */
+        .toggle-section-btn {
+            transition: all 0.3s ease;
+        }
+
+        .toggle-section-btn .icon-rotate {
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-section-btn.collapsed .icon-rotate {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-section {
+            transition: all 0.4s ease;
+        }
+
+        footer {
+            background: var(--gradient-bg);
+            color: var(--color-text-on-primary);
+            padding: 15px 0;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        footer a {
+            color: var(--color-text-on-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+            color: var(--color-accent);
+        }
+
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .compta-card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        /* --- Bouton d'installation flottant --- */
+        #installBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9999;
+            background: var(--gradient-bg);
+            color: #fff;
+            border: none;
+            border-radius: 60px;
+            padding: 12px 24px;
+            font-weight: 600;
+            box-shadow: 0 8px 30px rgba(13, 59, 94, 0.4);
+            display: none;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        #installBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 36px rgba(13, 59, 94, 0.6);
+        }
+        #installBtn i {
+            font-size: 1.4rem;
+        }
+        @media (max-width: 576px) {
+            #installBtn {
+                bottom: 20px;
+                right: 20px;
+                padding: 10px 18px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Statut de connexion permanent dans le header */
+        #connectionStatus {
+            font-size: 0.8rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+            margin-left: 12px;
+        }
+        #connectionStatus.online {
+            background-color: #198754;
+            color: white;
+        }
+        #connectionStatus.offline {
+            background-color: #dc3545;
+            color: white;
+        }
+        #connectionStatus i {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-tree-fill me-2"></i> AgriAchat
+                <!-- Toast permanent : statut en ligne / hors ligne -->
+                <span id="connectionStatus" class="online">
+                    <i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <li class="nav-item" id="nav-dashboard">
+                        <a class="nav-link" href="index.html"><i class="bi bi-speedometer2 me-1"></i> Tableau de bord</a>
+                    </li>
+                    <li class="nav-item" id="nav-achats">
+                        <a class="nav-link" href="achat.html"><i class="bi bi-cart-plus me-1"></i> Achats</a>
+                    </li>
+                    <li class="nav-item" id="nav-approv">
+                        <a class="nav-link" href="approv.html"><i class="bi bi-wallet2 me-1"></i> Approvisionnement</a>
+                    </li>
+                    <li class="nav-item" id="nav-compta">
+                        <a class="nav-link active" aria-current="page" href="comptabilite.html"><i class="bi bi-calculator me-1"></i> Comptabilité</a>
+                    </li>
+                    <li class="nav-item" id="nav-inventaire">
+                        <a class="nav-link" href="point.html"><i class="bi bi-boxes me-1"></i> Inventaire</a>
+                    </li>
+                    <li class="nav-item" id="nav-parametres">
+                        <a class="nav-link" href="parametres.html"><i class="bi bi-gear me-1"></i> Paramètres</a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="user-info" id="userInfoNav">
+                            <span id="navUserName">—</span>
+                            <span class="badge-role-nav" id="navUserRole">—</span>
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm" id="logoutBtn">
+                            <i class="bi bi-box-arrow-right me-1"></i> Déconnecter
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4 flex-grow-1">
+        <h2 class="section-title"><i class="bi bi-calculator me-2"></i> Comptabilité</h2>
+
+        <!-- Plaquette KPI compacte -->
+        <div class="kpi-plaquette">
+            <div class="row g-0 align-items-center">
+                <div class="col kpi-item kpi-approv">
+                    <div class="kpi-icon"><i class="bi bi-wallet2 text-success"></i></div>
+                    <div class="kpi-value" id="kpiTotalApprov">0 FCFA</div>
+                    <div class="kpi-label">Approvisionnements</div>
+                </div>
+                <div class="col kpi-item kpi-depenses">
+                    <div class="kpi-icon"><i class="bi bi-cart text-danger"></i></div>
+                    <div class="kpi-value" id="kpiTotalDepenses">0 FCFA</div>
+                    <div class="kpi-label">Dépenses Achats</div>
+                </div>
+                <div class="col kpi-item kpi-commissions">
+                    <div class="kpi-icon"><i class="bi bi-percent text-warning"></i></div>
+                    <div class="kpi-value" id="kpiTotalCommissions">0 FCFA</div>
+                    <div class="kpi-label">Commissions</div>
+                </div>
+                <div class="col kpi-item kpi-frais">
+                    <div class="kpi-icon"><i class="bi bi-truck" style="color:#383d94;"></i></div>
+                    <div class="kpi-value" id="kpiTotalFrais">0 FCFA</div>
+                    <div class="kpi-label">Frais livraison</div>
+                </div>
+                <div class="col kpi-item kpi-solde">
+                    <div class="kpi-icon"><i class="bi bi-piggy-bank text-info"></i></div>
+                    <div class="kpi-value" id="kpiSoldeDisponible">0 FCFA</div>
+                    <div class="kpi-label">Solde Disponible</div>
+                </div>
+                <div class="col kpi-item" style="border-right:none;">
+                    <button class="btn btn-outline-secondary btn-sm w-100" id="btnExportCompta" title="Exporter CSV">
+                        <i class="bi bi-download"></i> CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <label for="filterComptaCmd" class="form-label small fw-semibold">Commanditaire</label>
+                <select class="form-select form-select-sm" id="filterComptaCmd">
+                    <option value="">Tous les commanditaires</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="filterComptaType" class="form-label small fw-semibold">Type de mouvement</label>
+                <select class="form-select form-select-sm" id="filterComptaType">
+                    <option value="">Tous</option>
+                    <option value="approvisionnement">Approvisionnement</option>
+                    <option value="achat">Achat</option>
+                    <option value="commission">Commission</option>
+                    <option value="frais">Frais livraison</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="filterComptaDebut" class="form-label small fw-semibold">Date début</label>
+                <input type="date" class="form-control form-control-sm" id="filterComptaDebut">
+            </div>
+            <div class="col-md-2">
+                <label for="filterComptaFin" class="form-label small fw-semibold">Date fin</label>
+                <input type="date" class="form-control form-control-sm" id="filterComptaFin">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-outline-secondary btn-sm w-100" id="btnResetComptaFilters">
+                    <i class="bi bi-arrow-counterclockwise"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
+
+        <!-- Boutons toggle pour les sections -->
+        <div class="d-flex gap-2 mb-3 flex-wrap">
+            <button class="btn btn-outline-primary btn-sm toggle-section-btn" data-target="journalSection">
+                <i class="bi bi-chevron-down icon-rotate me-1"></i> Journal des mouvements
+            </button>
+            <button class="btn btn-outline-primary btn-sm toggle-section-btn" data-target="syntheseSection">
+                <i class="bi bi-chevron-down icon-rotate me-1"></i> Synthèse par commanditaire
+            </button>
+            <button class="btn btn-outline-primary btn-sm toggle-section-btn" data-target="resumeSection">
+                <i class="bi bi-chevron-down icon-rotate me-1"></i> Résumé global
+            </button>
+        </div>
+
+        <!-- Journal des mouvements -->
+        <div class="card compta-card mb-4 collapsible-section" id="journalSection">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-text me-2"></i> Journal des mouvements</span>
+                <span class="badge bg-light text-dark" id="nbMouvements">0 mouvements</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle table-compta">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Commanditaire</th>
+                                <th>Détail</th>
+                                <th>Crédit (FCFA)</th>
+                                <th>Débit (FCFA)</th>
+                                <th>Solde (FCFA)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="journalTableBody">
+                            <!-- Rempli par JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mt-2" id="emptyJournalMessage">Aucun mouvement enregistré.</p>
+            </div>
+        </div>
+
+        <!-- Synthèse par commanditaire -->
+        <div class="card compta-card mb-4 collapsible-section" id="syntheseSection">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i> Synthèse par commanditaire
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Commanditaire</th>
+                                <th>Approvisionnements</th>
+                                <th>Achats</th>
+                                <th>Commissions</th>
+                                <th>Frais livraison</th>
+                                <th>Solde</th>
+                            </tr>
+                        </thead>
+                        <tbody id="syntheseTableBody">
+                            <!-- Rempli par JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mt-2" id="emptySyntheseMessage">Aucune donnée à synthétiser.</p>
+            </div>
+        </div>
+
+        <!-- Résumé global -->
+        <div class="row g-3 collapsible-section" id="resumeSection">
+            <div class="col-md-6">
+                <div class="card compta-card">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart me-2"></i> Résumé des dépenses par type
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-cart me-2 text-danger"></i> Achats</span>
+                                <strong id="resumeAchats">0 FCFA</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-percent me-2 text-warning"></i> Commissions</span>
+                                <strong id="resumeCommissions">0 FCFA</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-truck me-2 text-info"></i> Frais de livraison</span>
+                                <strong id="resumeFrais">0 FCFA</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                                <span class="fw-bold">Total dépenses</span>
+                                <strong id="resumeTotalDepenses" class="text-danger">0 FCFA</strong>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                                <span class="fw-bold"><i class="bi bi-wallet2 me-2 text-success"></i> Approvisionnements</span>
+                                <strong id="resumeApprov" class="text-success">0 FCFA</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card compta-card">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle me-2"></i> Informations
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-3">
+                                <i class="bi bi-check-circle text-success me-2"></i>
+                                <strong>Approvisionnements :</strong> Fonds mis à disposition par les commanditaires
+                            </li>
+                            <li class="mb-3">
+                                <i class="bi bi-cart text-danger me-2"></i>
+                                <strong>Achats :</strong> Dépenses totales (incluant les commissions intégrées)
+                            </li>
+                            <li class="mb-3">
+                                <i class="bi bi-percent text-warning me-2"></i>
+                                <strong>Commissions :</strong> Frais de commission par unité achetée
+                            </li>
+                            <li class="mb-3">
+                                <i class="bi bi-truck text-info me-2"></i>
+                                <strong>Frais de livraison :</strong> Frais additionnels déduits lors des livraisons
+                            </li>
+                            <li>
+                                <i class="bi bi-piggy-bank text-primary me-2"></i>
+                                <strong>Solde :</strong> Approvisionnements - (Achats + Commissions + Frais)
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            Conçu par <strong>Atizoun Plateny AMOUSSOU</strong> - 
+            <a href="mailto:atizoun@gmail.com">atizoun@gmail.com</a> - 
+            <a href="tel:0197744035">01 97 74 40 35</a>
+        </div>
+    </footer>
+
+    <!-- Bouton d'installation flottant -->
+    <button id="installBtn">
+        <i class="bi bi-download"></i> Installer l'application
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ============================================================ -->
+    <!--  INITIALISATION FIREBASE & GESTION DES DONNÉES EN TEMPS RÉEL   -->
+    <!-- ============================================================ -->
+    <script>
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAsmRMJCtxsOkf3rCylpuTCcm4pnObvRK0",
+            authDomain: "regachat-ad0e9.firebaseapp.com",
+            databaseURL: "https://regachat-ad0e9-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "regachat-ad0e9",
+            storageBucket: "regachat-ad0e9.firebasestorage.app",
+            messagingSenderId: "809503223361",
+            appId: "1:809503223361:web:bbcf81fea1a6afdd86e0c0"
+        };
+
+        // Initialiser Firebase (compat)
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // =============================================================
+        //  GESTION DU STATUT DE CONNEXION (toast permanent)
+        // =============================================================
+        const statusEl = document.getElementById('connectionStatus');
+        const statusText = document.getElementById('statusText');
+
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            const isConnected = snap.val() === true;
+            if (isConnected) {
+                statusEl.className = 'online';
+                statusText.textContent = 'En ligne';
+                statusEl.innerHTML = '<i class="bi bi-wifi"></i> <span id="statusText">En ligne</span>';
+            } else {
+                statusEl.className = 'offline';
+                statusText.textContent = 'Hors ligne';
+                statusEl.innerHTML = '<i class="bi bi-wifi-off"></i> <span id="statusText">Hors ligne</span>';
+            }
+        });
+
+        window.addEventListener('online', () => {
+            // Le listener Firebase mettra à jour automatiquement
+        });
+        window.addEventListener('offline', () => {
+            // Même chose
+        });
+
+        // =============================================================
+        //  FONCTIONS DE LECTURE DES DONNÉES (avec transformation pour inclure l'ID)
+        // =============================================================
+        function transformSnapshot(snapshot) {
+            const val = snapshot.val();
+            if (!val) return [];
+            return Object.entries(val).map(([id, data]) => ({ id, ...data }));
+        }
+
+        async function getUsers() {
+            const snapshot = await database.ref('users').once('value');
+            return transformSnapshot(snapshot);
+        }
+
+        async function getCommanditaires() {
+            const snapshot = await database.ref('commanditaires').once('value');
+            return transformSnapshot(snapshot);
+        }
+
+        async function getProduits() {
+            const snapshot = await database.ref('produits').once('value');
+            return transformSnapshot(snapshot);
+        }
+
+        async function getMesures() {
+            const snapshot = await database.ref('mesures').once('value');
+            return transformSnapshot(snapshot);
+        }
+
+        async function getApprovisionnements() {
+            const snapshot = await database.ref('approvisionnements').once('value');
+            return transformSnapshot(snapshot);
+        }
+
+        async function getAchats() {
+            const snapshot = await database.ref('achats').once('value');
+            return transformSnapshot(snapshot);
+        }
+
+        async function getLivraisons() {
+            const snapshot = await database.ref('livraisons').once('value');
+            return transformSnapshot(snapshot);
+        }
+
+        // =============================================================
+        //  DONNÉES LOCALES (seront mises à jour par les listeners)
+        // =============================================================
+        let users = [];
+        let commanditaires = [];
+        let produits = [];
+        let mesures = [];
+        let approvisionnements = [];
+        let achats = [];
+        let livraisons = [];
+
+        // =============================================================
+        //  FONCTIONS DE RENDU PRINCIPALES (inchangées)
+        // =============================================================
+        function buildJournalMouvements() {
+            const mouvements = [];
+
+            approvisionnements.forEach(approv => {
+                mouvements.push({
+                    date: approv.date,
+                    type: 'approvisionnement',
+                    commanditaireId: approv.commanditaireId,
+                    detail: approv.commentaire || 'Approvisionnement',
+                    credit: approv.montant,
+                    debit: 0,
+                    id: 'approv_' + approv.id
+                });
+            });
+
+            achats.forEach(achat => {
+                const prod = produits.find(p => p.id === achat.produitId);
+                const mes = mesures.find(m => m.id === achat.mesureId);
+                const prodNom = prod ? prod.nom : 'Produit';
+                const mesNom = mes ? (mes.abrev || mes.nom) : '';
+                const detailAchat = `${prodNom} (${mesNom}) x${achat.quantite} @${achat.prixUnitaire}`;
+                
+                mouvements.push({
+                    date: achat.date,
+                    type: 'achat',
+                    commanditaireId: achat.commanditaireId,
+                    detail: detailAchat,
+                    credit: 0,
+                    debit: achat.total,
+                    id: 'achat_' + achat.id
+                });
+
+                const commissionTotale = achat.quantite * achat.commission;
+                if (commissionTotale > 0) {
+                    mouvements.push({
+                        date: achat.date,
+                        type: 'commission',
+                        commanditaireId: achat.commanditaireId,
+                        detail: `Commission sur ${prodNom} (${mesNom}) x${achat.quantite}`,
+                        credit: 0,
+                        debit: commissionTotale,
+                        id: 'comm_' + achat.id
+                    });
+                }
+            });
+
+            livraisons.forEach(liv => {
+                if (liv.deduireApprov && liv.frais && liv.frais.length > 0) {
+                    const totalFrais = liv.frais.reduce((s, f) => s + f.montant, 0);
+                    const prod = produits.find(p => p.id === liv.produitId);
+                    const prodNom = prod ? prod.nom : 'Produit';
+                    const fraisLibelles = liv.frais.map(f => f.libelle || 'Frais').join(', ');
+                    
+                    if (totalFrais > 0) {
+                        mouvements.push({
+                            date: liv.date,
+                            type: 'frais',
+                            commanditaireId: liv.commanditaireId,
+                            detail: `Frais livraison ${prodNom}: ${fraisLibelles}`,
+                            credit: 0,
+                            debit: totalFrais,
+                            id: 'frais_' + liv.id
+                        });
+                    }
+                }
+            });
+
+            mouvements.sort((a, b) => new Date(b.date) - new Date(a.date));
+            return mouvements;
+        }
+
+        function getSyntheseParCommanditaire() {
+            const synthese = {};
+
+            commanditaires.forEach(cmd => {
+                synthese[cmd.id] = {
+                    nom: cmd.nom,
+                    approvisionnements: 0,
+                    achats: 0,
+                    commissions: 0,
+                    frais: 0
+                };
+            });
+
+            approvisionnements.forEach(approv => {
+                if (synthese[approv.commanditaireId]) {
+                    synthese[approv.commanditaireId].approvisionnements += approv.montant;
+                }
+            });
+
+            achats.forEach(achat => {
+                if (synthese[achat.commanditaireId]) {
+                    synthese[achat.commanditaireId].achats += achat.total;
+                    synthese[achat.commanditaireId].commissions += achat.quantite * achat.commission;
+                }
+            });
+
+            livraisons.forEach(liv => {
+                if (liv.deduireApprov && liv.frais && synthese[liv.commanditaireId]) {
+                    const totalFrais = liv.frais.reduce((s, f) => s + f.montant, 0);
+                    synthese[liv.commanditaireId].frais += totalFrais;
+                }
+            });
+
+            return Object.values(synthese);
+        }
+
+        // =============================================================
+        //  FONCTIONS UI (inchangées)
+        // =============================================================
+        function populateSelects() {
+            const filter = document.getElementById('filterComptaCmd');
+            filter.innerHTML = '<option value="">Tous les commanditaires</option>';
+            commanditaires.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.nom;
+                filter.appendChild(opt);
+            });
+        }
+
+        function getBadgeType(type) {
+            switch(type) {
+                case 'approvisionnement': return '<span class="badge-mouvement badge-approvisionnement"><i class="bi bi-wallet2 me-1"></i>Approvisionnement</span>';
+                case 'achat': return '<span class="badge-mouvement badge-achat"><i class="bi bi-cart me-1"></i>Achat</span>';
+                case 'commission': return '<span class="badge-mouvement badge-commission"><i class="bi bi-percent me-1"></i>Commission</span>';
+                case 'frais': return '<span class="badge-mouvement badge-frais"><i class="bi bi-truck me-1"></i>Frais livraison</span>';
+                default: return type;
+            }
+        }
+
+        function renderJournal() {
+            const mouvements = buildJournalMouvements();
+
+            let filtered = [...mouvements];
+            const cmdFilter = document.getElementById('filterComptaCmd').value;
+            const typeFilter = document.getElementById('filterComptaType').value;
+            const dateDebut = document.getElementById('filterComptaDebut').value;
+            const dateFin = document.getElementById('filterComptaFin').value;
+
+            if (cmdFilter) {
+                filtered = filtered.filter(m => m.commanditaireId === cmdFilter);
+            }
+            if (typeFilter) {
+                filtered = filtered.filter(m => m.type === typeFilter);
+            }
+            if (dateDebut) {
+                filtered = filtered.filter(m => m.date >= dateDebut);
+            }
+            if (dateFin) {
+                filtered = filtered.filter(m => m.date <= dateFin);
+            }
+
+            let soldeActuel = 0;
+            const filteredSorted = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const filteredSoldes = {};
+            filteredSorted.forEach(m => {
+                soldeActuel += m.credit - m.debit;
+                filteredSoldes[m.id] = soldeActuel;
+            });
+
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const tbody = document.getElementById('journalTableBody');
+            const emptyMsg = document.getElementById('emptyJournalMessage');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                filtered.forEach(m => {
+                    const cmd = commanditaires.find(c => c.id === m.commanditaireId);
+                    const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                    const soldeLigne = filteredSoldes[m.id] || 0;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${m.date}</td>
+                        <td>${getBadgeType(m.type)}</td>
+                        <td>${cmdNom}</td>
+                        <td>${m.detail}</td>
+                        <td class="mouvement-credit">${m.credit > 0 ? '+' + m.credit.toLocaleString() : '—'}</td>
+                        <td class="mouvement-debit">${m.debit > 0 ? '-' + m.debit.toLocaleString() : '—'}</td>
+                        <td><strong>${soldeLigne.toLocaleString()} FCFA</strong></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('nbMouvements').textContent = filtered.length + ' mouvements';
+            renderSynthese();
+            updateKPIs();
+        }
+
+        function renderSynthese() {
+            const synthese = getSyntheseParCommanditaire();
+            const tbody = document.getElementById('syntheseTableBody');
+            const emptyMsg = document.getElementById('emptySyntheseMessage');
+            tbody.innerHTML = '';
+
+            if (synthese.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                synthese.forEach(s => {
+                    const totalDebit = s.achats + s.commissions + s.frais;
+                    const solde = s.approvisionnements - totalDebit;
+                    const soldeClass = solde >= 0 ? 'text-success' : 'text-danger';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${s.nom}</strong></td>
+                        <td class="text-success">${s.approvisionnements.toLocaleString()} FCFA</td>
+                        <td class="text-danger">${s.achats.toLocaleString()} FCFA</td>
+                        <td class="text-warning">${s.commissions.toLocaleString()} FCFA</td>
+                        <td>${s.frais.toLocaleString()} FCFA</td>
+                        <td><strong class="${soldeClass}">${solde.toLocaleString()} FCFA</strong></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function updateKPIs() {
+            const mouvements = buildJournalMouvements();
+            
+            const totalApprov = mouvements
+                .filter(m => m.type === 'approvisionnement')
+                .reduce((s, m) => s + m.credit, 0);
+            
+            const totalAchats = mouvements
+                .filter(m => m.type === 'achat')
+                .reduce((s, m) => s + m.debit, 0);
+            
+            const totalCommissions = mouvements
+                .filter(m => m.type === 'commission')
+                .reduce((s, m) => s + m.debit, 0);
+            
+            const totalFrais = mouvements
+                .filter(m => m.type === 'frais')
+                .reduce((s, m) => s + m.debit, 0);
+
+            const solde = totalApprov - totalAchats - totalCommissions - totalFrais;
+
+            document.getElementById('kpiTotalApprov').textContent = totalApprov.toLocaleString() + ' FCFA';
+            document.getElementById('kpiTotalDepenses').textContent = totalAchats.toLocaleString() + ' FCFA';
+            document.getElementById('kpiTotalCommissions').textContent = totalCommissions.toLocaleString() + ' FCFA';
+            document.getElementById('kpiTotalFrais').textContent = totalFrais.toLocaleString() + ' FCFA';
+            document.getElementById('kpiSoldeDisponible').textContent = solde.toLocaleString() + ' FCFA';
+
+            document.getElementById('resumeAchats').textContent = totalAchats.toLocaleString() + ' FCFA';
+            document.getElementById('resumeCommissions').textContent = totalCommissions.toLocaleString() + ' FCFA';
+            document.getElementById('resumeFrais').textContent = totalFrais.toLocaleString() + ' FCFA';
+            document.getElementById('resumeTotalDepenses').textContent = (totalAchats + totalCommissions + totalFrais).toLocaleString() + ' FCFA';
+            document.getElementById('resumeApprov').textContent = totalApprov.toLocaleString() + ' FCFA';
+        }
+
+        // =============================================================
+        //  TOGGLE SECTIONS (inchangé)
+        // =============================================================
+        document.querySelectorAll('.toggle-section-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target;
+                const target = document.getElementById(targetId);
+                const icon = this.querySelector('.icon-rotate');
+                
+                if (target.style.display === 'none') {
+                    target.style.display = '';
+                    this.classList.remove('collapsed');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                } else {
+                    target.style.display = 'none';
+                    this.classList.add('collapsed');
+                    if (icon) icon.style.transform = 'rotate(-90deg)';
+                }
+            });
+        });
+
+        // =============================================================
+        //  ÉVÉNEMENTS DES FILTRES ET EXPORT (inchangés)
+        // =============================================================
+        document.getElementById('filterComptaCmd').addEventListener('change', renderJournal);
+        document.getElementById('filterComptaType').addEventListener('change', renderJournal);
+        document.getElementById('filterComptaDebut').addEventListener('change', renderJournal);
+        document.getElementById('filterComptaFin').addEventListener('change', renderJournal);
+
+        document.getElementById('btnResetComptaFilters').addEventListener('click', function() {
+            document.getElementById('filterComptaCmd').value = '';
+            document.getElementById('filterComptaType').value = '';
+            document.getElementById('filterComptaDebut').value = '';
+            document.getElementById('filterComptaFin').value = '';
+            renderJournal();
+        });
+
+        document.getElementById('btnExportCompta').addEventListener('click', function() {
+            const mouvements = buildJournalMouvements();
+            if (mouvements.length === 0) {
+                alert('Aucune donnée à exporter.');
+                return;
+            }
+
+            let csv = 'Date,Type,Commanditaire,Détail,Crédit (FCFA),Débit (FCFA)\n';
+            const sorted = [...mouvements].sort((a, b) => new Date(b.date) - new Date(a.date));
+            sorted.forEach(m => {
+                const cmd = commanditaires.find(c => c.id === m.commanditaireId);
+                const cmdNom = cmd ? cmd.nom : 'Inconnu';
+                const typeLabel = m.type === 'approvisionnement' ? 'Approvisionnement' :
+                                 m.type === 'achat' ? 'Achat' :
+                                 m.type === 'commission' ? 'Commission' : 'Frais livraison';
+                csv += `${m.date},"${typeLabel}","${cmdNom}","${m.detail}",${m.credit},${m.debit}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'comptabilite.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        });
+
+        // =============================================================
+        //  GESTION DE LA SESSION UTILISATEUR AVEC FIREBASE
+        // =============================================================
+        async function initSession() {
+            try {
+                users = await getUsers();
+                // Créer des utilisateurs par défaut si la base est vide
+                if (users.length === 0) {
+                    const defaultUsers = [
+                        { id: "1", name: "Directeur Général (Admin)", role: "admin", password: "1234", email: "admin@agriachat.com" },
+                        { id: "2", name: "Acheteur Central", role: "acheteur", password: "5678", email: "acheteur@agriachat.com" }
+                    ];
+                    for (const u of defaultUsers) {
+                        await database.ref('users/' + u.id).set({
+                            name: u.name,
+                            role: u.role,
+                            password: u.password,
+                            email: u.email
+                        });
+                    }
+                    users = defaultUsers;
+                }
+
+                const currentUserId = localStorage.getItem('agri_current_user_id');
+                let currentUser = users.find(u => u.id === currentUserId);
+                if (!currentUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                document.getElementById('navUserName').textContent = currentUser.name || 'Utilisateur';
+                document.getElementById('navUserRole').textContent = currentUser.role ? currentUser.role.toUpperCase() : '';
+
+                document.getElementById('logoutBtn').addEventListener('click', function() {
+                    localStorage.removeItem('agri_current_user_id');
+                    window.location.href = 'login.html';
+                });
+
+                const role = currentUser.role;
+                const navApprov = document.getElementById('nav-approv');
+                const navCompta = document.getElementById('nav-compta');
+                const navInventaire = document.getElementById('nav-inventaire');
+                const navParametres = document.getElementById('nav-parametres');
+
+                if (role !== 'admin') {
+                    if (navApprov) navApprov.style.display = 'none';
+                    if (navCompta) navCompta.style.display = 'none';
+                    if (navInventaire) navInventaire.style.display = 'none';
+                    if (navParametres) navParametres.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Erreur chargement utilisateurs :', err);
+                alert('Impossible de charger les utilisateurs. Vérifiez votre connexion.');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // =============================================================
+        //  LECTURE DES DONNÉES MÉTIER AVEC ÉCOUTE EN TEMPS RÉEL
+        // =============================================================
+        function initDataListeners() {
+            // Commanditaires
+            database.ref('commanditaires').on('value', (snapshot) => {
+                commanditaires = transformSnapshot(snapshot);
+                populateSelects();
+                renderJournal();
+            });
+
+            // Produits
+            database.ref('produits').on('value', (snapshot) => {
+                produits = transformSnapshot(snapshot);
+                renderJournal();
+            });
+
+            // Mesures
+            database.ref('mesures').on('value', (snapshot) => {
+                mesures = transformSnapshot(snapshot);
+                renderJournal();
+            });
+
+            // Approvisionnements
+            database.ref('approvisionnements').on('value', (snapshot) => {
+                approvisionnements = transformSnapshot(snapshot);
+                renderJournal();
+            });
+
+            // Achats
+            database.ref('achats').on('value', (snapshot) => {
+                achats = transformSnapshot(snapshot);
+                renderJournal();
+            });
+
+            // Livraisons
+            database.ref('livraisons').on('value', (snapshot) => {
+                livraisons = transformSnapshot(snapshot);
+                renderJournal();
+            });
+        }
+
+        // =============================================================
+        //  INITIALISATION GÉNÉRALE
+        // =============================================================
+        document.addEventListener('DOMContentLoaded', async function() {
+            // D'abord, initialiser la session (bloquant)
+            await initSession();
+
+            // Ensuite, charger les données métier avec listeners
+            initDataListeners();
+
+            // Une première fois pour que l'affichage soit immédiat
+            // (les listeners vont déclencher les rendus, mais au cas où)
+            // On attend un peu que les premières données arrivent.
+            // On peut aussi forcer un rendu avec des données vides.
+            renderJournal();
+        });
+    </script>
+
+    <!-- Enregistrement du service worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then((registration) => {
+                    console.log('Service Worker enregistré avec succès :', registration);
+                })
+                .catch((error) => {
+                    console.error('Échec de l\'enregistrement du Service Worker :', error);
+                });
+        }
+    </script>
+
+    <!-- Gestion du bouton d'installation -->
+    <script>
+        (function() {
+            let deferredPrompt;
+            const installBtn = document.getElementById('installBtn');
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                installBtn.style.display = 'flex';
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        console.log('Utilisateur a accepté l\'installation');
+                        installBtn.style.display = 'none';
+                    } else {
+                        console.log('Utilisateur a refusé l\'installation');
+                    }
+                    deferredPrompt = null;
+                }
+            });
+
+            window.addEventListener('appinstalled', () => {
+                installBtn.style.display = 'none';
+                console.log('Application installée');
+            });
+        })();
+    </script>
+
+</body>
+</html>
